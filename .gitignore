@@ -1,5 +1,3 @@
-### password ###
-.env
 
 ### Maven & Code Build  ###
 target/
@@ -35,3 +33,6 @@ ehthumbs.db
 $RECYCLE.BIN/
 *.stackdump
 [Dd]esktop.ini
+
+### password ###
+application-local.yml

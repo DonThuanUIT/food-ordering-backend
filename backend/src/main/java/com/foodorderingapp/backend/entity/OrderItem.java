@@ -22,11 +22,11 @@ public class OrderItem {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
+    @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_item_order"))
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "food_id")
+    @JoinColumn(name = "food_id", foreignKey = @ForeignKey(name = "fk_order_item_food"))
     private Food food;
 
     @Column(name = "food_name", nullable = false)

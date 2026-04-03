@@ -32,15 +32,15 @@ public class Food extends BaseEntity {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vendor_id", nullable = false)
+    @JoinColumn(name = "vendor_id", nullable = false, foreignKey = @ForeignKey(name = "fk_food_vendor"))
     private User vendor;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
+    @JoinColumn(name = "category_id", nullable = false, foreignKey = @ForeignKey(name = "fk_food_category"))
     private Category category;
 
-    @NotBlank(message = "Tên món ăn không được để trống")
+    @NotBlank(message = "food's name cannot left blank")
     @Column(nullable = false)
     private String name;
 
@@ -48,7 +48,7 @@ public class Food extends BaseEntity {
     private String description;
 
     @NotNull
-    @DecimalMin(value = "0.01", message = "Giá tiền phải lớn hơn 0")
+    @DecimalMin(value = "0.01", message = "Price must be greater than 0")
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 

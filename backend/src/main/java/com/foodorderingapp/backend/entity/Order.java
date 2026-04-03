@@ -29,15 +29,15 @@ public class Order extends BaseEntity {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id", nullable = false)
+    @JoinColumn(name = "student_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_student"))
     private User student;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vendor_id", nullable = false)
+    @JoinColumn(name = "vendor_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_vendor"))
     private User vendor;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "building_id", nullable = false)
+    @JoinColumn(name = "building_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_building"))
     private Building building;
 
     @Column(name = "total_amount", nullable = false)

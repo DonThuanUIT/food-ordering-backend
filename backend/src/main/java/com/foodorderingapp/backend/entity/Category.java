@@ -11,7 +11,7 @@ import org.hibernate.annotations.SQLRestriction;
         uniqueConstraints = {@UniqueConstraint(columnNames = {"vendor_id", "name"})},
         indexes = {@Index(name = "idx_category_vendor", columnList = "vendor_id")}
 )
-@SQLRestriction("is_deleted = false") // Chuẩn Spring Boot 3 thay thế cho @Where
+@SQLRestriction("is_deleted = false")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,10 +27,10 @@ public class Category extends BaseEntity {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vendor_id", nullable = false)
+    @JoinColumn(name = "vendor_id", nullable = false, foreignKey = @ForeignKey(name = "fk_category_vendor"))
     private User vendor;
 
-    @NotBlank(message = "Tên danh mục không được để trống")
+    @NotBlank(message = "Category's name cannot left blank")
     @Column(nullable = false)
     private String name;
 

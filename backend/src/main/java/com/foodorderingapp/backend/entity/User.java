@@ -29,7 +29,7 @@ public class User extends BaseEntity {
     @EqualsAndHashCode.Include
     private UUID id;
 
-    @NotBlank(message = "Số điện thoại không được để trống")
+    @NotBlank(message = "Phone number cannot be left black")
     @Column(nullable = false, unique = true)
     private String phone;
 
