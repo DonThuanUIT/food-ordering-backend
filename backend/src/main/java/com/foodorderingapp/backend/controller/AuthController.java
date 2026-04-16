@@ -2,6 +2,7 @@ package com.foodorderingapp.backend.controller;
 
 
 import com.foodorderingapp.backend.dto.request.RegisterRequest;
+import com.foodorderingapp.backend.dto.response.AuthResponse;
 import com.foodorderingapp.backend.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     private final AuthService authService;
     @PostMapping("/register")
-    public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authService.register(request));
     }
 }
