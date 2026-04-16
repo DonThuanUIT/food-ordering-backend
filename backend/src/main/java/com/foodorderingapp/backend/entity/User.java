@@ -60,4 +60,7 @@ public class User extends BaseEntity {
 
     @Column(name = "bank_account_number")
     private String bankAccountNumber;
+
+    @Column(name = "full_name")
+    private String fullName;
 }
