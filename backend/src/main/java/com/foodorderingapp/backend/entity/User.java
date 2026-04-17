@@ -66,6 +66,9 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "bank_account_number")
     private String bankAccountNumber;
 
+    @Column(name = "full_name")
+    private String fullName;
+
 
 
     @Override
