@@ -1,70 +1,73 @@
 package com.foodorderingapp.backend.entity;
 
-import com.foodorderingapp.backend.entity.enums.OrderStatusEnum;
-import com.foodorderingapp.backend.entity.enums.PaymentMethodEnum;
-import com.foodorderingapp.backend.entity.enums.PaymentStatusEnum;
+import com.foodorderingapp.backend.entity.type.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "orders")
+@Table(
+        name = "orders",
+        indexes = {
+                @Index(name = "idx_order_user", columnList = "user_id"),
+                @Index(name = "idx_order_shop", columnList = "shop_id"),
+                @Index(name = "idx_order_status", columnList = "status"),
+                @Index(name = "idx_order_created", columnList = "created_at")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
-public class Order extends BaseEntity {
+public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @EqualsAndHashCode.Include
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_student"))
-    private User student;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vendor_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_vendor"))
-    private User vendor;
+    @JoinColumn(name = "shop_id", nullable = false)
+    private Shop shop;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "building_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_building"))
-    private Building building;
+    @JoinColumn(name = "bank_account_id")
+    private BankAccount bankAccount;
 
-    @Column(name = "total_amount", nullable = false)
-    private BigDecimal totalAmount;
+    @Column(name = "total_price", nullable = false)
+    private BigDecimal totalPrice;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
-    private OrderStatusEnum status = OrderStatusEnum.PENDING;
+    private OrderStatus status;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "payment_method", nullable = false)
-    private PaymentMethodEnum paymentMethod = PaymentMethodEnum.COD;
+    @Column(name = "payment_proof_url")
+    private String paymentProofUrl;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "payment_status", nullable = false)
-    private PaymentStatusEnum paymentStatus = PaymentStatusEnum.UNPAID;
+    @Column(name = "building_snapshot")
+    private String buildingSnapshot;
 
-    @Column(name = "bill_image_url")
-    private String billImageUrl;
+    @Column(name = "drop_off_snapshot")
+    private String dropOffSnapshot;
 
-    @Column(columnDefinition = "TEXT")
-    private String note;
-
-    // Mapping 1 Đơn hàng -> Nhiều Chi tiết món ăn
+    @Builder.Default
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderItem> orderItems = new ArrayList<>();
+    private List<OrderDetail> orderDetails = new ArrayList<>();
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }
