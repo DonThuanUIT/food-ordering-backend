@@ -1,5 +1,6 @@
 package com.foodorderingapp.backend.entity;
 
+import com.foodorderingapp.backend.entity.enums.ShopStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -42,4 +43,8 @@ public class Shop {
 
     @Column(name = "is_active")
     private boolean isActive = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private ShopStatus status = ShopStatus.PENDING;
 }

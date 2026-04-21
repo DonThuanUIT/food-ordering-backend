@@ -39,4 +39,10 @@ public class User extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "building_id")
     private Building building;
+
+    @Column(name = "email", unique = true)
+    private String email;
+
+    @Column(name = "is_email_verified")
+    private Boolean isEmailVerified = false;
 }
