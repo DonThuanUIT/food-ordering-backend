@@ -1,6 +1,9 @@
 package com.foodorderingapp.backend.entity.enums;
 
-public enum RoleEnum {
+import lombok.Getter;
+
+@Getter
+public enum UserRole {
     STUDENT,
     VENDOR,
     ADMIN

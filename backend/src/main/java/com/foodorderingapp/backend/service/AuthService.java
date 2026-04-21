@@ -3,11 +3,9 @@ package com.foodorderingapp.backend.service;
 import com.foodorderingapp.backend.dto.request.RegisterRequest;
 import com.foodorderingapp.backend.dto.response.AuthResponse;
 import com.foodorderingapp.backend.entity.User;
-import com.foodorderingapp.backend.entity.enums.RoleEnum;
-import com.foodorderingapp.backend.entity.enums.UserStatusEnum;
+import com.foodorderingapp.backend.entity.enums.UserRole;
 import com.foodorderingapp.backend.exception.AppException;
 import com.foodorderingapp.backend.repository.UserRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -34,8 +32,8 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
 
-        user.setRole(RoleEnum.STUDENT);
-        user.setStatus(UserStatusEnum.ACTIVE);
+        user.setRole(UserRole.STUDENT);
+       // user.setStatus(UserStatusEnum.ACTIVE);
         userRepository.save(user);
 
         return AuthResponse.builder()

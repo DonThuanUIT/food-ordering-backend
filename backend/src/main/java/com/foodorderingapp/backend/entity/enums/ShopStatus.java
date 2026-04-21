@@ -1,8 +1,8 @@
 package com.foodorderingapp.backend.entity.enums;
 
-public enum PaymentStatusEnum {
-    UNPAID,
+public enum ShopStatus {
     PENDING,
-    PAID,
-    FAILED
+    APPROVED,
+    REJECTED,
+    BANNED
 }
