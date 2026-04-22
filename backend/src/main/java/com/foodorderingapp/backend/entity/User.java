@@ -3,6 +3,8 @@ package com.foodorderingapp.backend.entity;
 import com.foodorderingapp.backend.entity.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.util.UUID;
 
 @Entity
@@ -33,6 +35,7 @@ public class User extends BaseEntity {
     private String fullName;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     private UserRole role;
 

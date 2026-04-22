@@ -3,6 +3,8 @@ package com.foodorderingapp.backend.entity;
 import com.foodorderingapp.backend.entity.enums.ShopStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalTime;
 import java.util.UUID;
@@ -42,9 +44,10 @@ public class Shop {
     private LocalTime closeTime;
 
     @Column(name = "is_active")
-    private boolean isActive = true;
+    private Boolean isActive = true;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status")
     private ShopStatus status = ShopStatus.PENDING;
 }
