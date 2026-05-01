@@ -1,6 +1,6 @@
 package com.foodorderingapp.backend.entity;
 
-import com.foodorderingapp.backend.entity.type.OrderStatus;
+import com.foodorderingapp.backend.entity.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
