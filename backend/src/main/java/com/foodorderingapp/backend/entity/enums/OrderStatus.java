@@ -1,4 +1,4 @@
-package com.foodorderingapp.backend.entity.type;
+package com.foodorderingapp.backend.entity.enums;
 
 import lombok.Getter;
 
