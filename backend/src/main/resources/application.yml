@@ -7,6 +7,16 @@ spring:
   profiles:
     active: local
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   datasource:
     driver-class-name: org.postgresql.Driver
     hikari:
@@ -16,7 +26,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update   # dev only
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
@@ -26,10 +36,15 @@ spring:
           time_zone: Asia/Ho_Chi_Minh
     open-in-view: false
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
 logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 jwt:
-  expiration: 86400000
+  expiration: 3600000
+  refresh-expiration: 604800000 # 7 day

@@ -6,6 +6,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -22,19 +23,36 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long expiration;
 
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
+
+    @Value("${jwt.refresh-expiration}")
+    private long refreshExpiration;
+
     private SecretKey getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(String username, String role) {
-        return Jwts.builder()
+    public String generateAccessToken(String username, String role) {
+        return buildToken(username, role, jwtExpiration);
+    }
+
+    public String generateRefreshToken(String username) {
+        return buildToken(username, null, refreshExpiration);
+    }
+
+    private String buildToken(String username, String role, long expiration) {
+        var jwtBuilder = Jwts.builder()
                 .subject(username)
-                .claim("role", role)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSignInKey(), Jwts.SIG.HS256)
-                .compact();
+                .signWith(getSignInKey(), Jwts.SIG.HS256);
+
+        if (role != null) {
+            jwtBuilder.claim("role", role);
+        }
+        return jwtBuilder.compact();
     }
 
     public String extractUsername(String token) {
@@ -45,14 +63,10 @@ public class JwtUtil {
         return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
-    public boolean isTokenValid(String token, String username) {
-        try {
-            final String extractedUsername = extractUsername(token);
-            return (extractedUsername.equals(username)) && !isTokenExpired(token);
-        } catch (Exception e) {
-            log.warn("JWT Validation failed: {}", e.getMessage());
-            return false;
-        }
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+
+        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {

@@ -1,40 +1,22 @@
 package com.foodorderingapp.backend.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.*;
-import org.hibernate.annotations.SQLRestriction;
+
+import java.util.UUID;
 
 @Entity
-@Table(name = "categories",
-        uniqueConstraints = {@UniqueConstraint(columnNames = {"vendor_id", "name"})},
-        indexes = {@Index(name = "idx_category_vendor", columnList = "vendor_id")}
-)
-@SQLRestriction("is_deleted = false")
+@Table(name = "categories")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
-public class Category extends BaseEntity {
-
+public class Category {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vendor_id", nullable = false, foreignKey = @ForeignKey(name = "fk_category_vendor"))
-    private User vendor;
-
-    @NotBlank(message = "Category's name cannot left blank")
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
-
-    @JsonIgnore
-    @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted = false;
 }
