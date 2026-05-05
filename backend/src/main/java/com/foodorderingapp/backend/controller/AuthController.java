@@ -37,4 +37,9 @@ public class AuthController {
         return ResponseEntity.ok(authService.verifyOtp(request));
     }
 
+    @PostMapping("/resend-otp")
+    public ResponseEntity<Void> resendOtp(@RequestParam String email) {
+        authService.resendOtp(email);
+        return ResponseEntity.ok().build();
+    }
 }

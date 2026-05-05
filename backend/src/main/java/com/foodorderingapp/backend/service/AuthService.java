@@ -77,7 +77,11 @@ public class AuthService {
     }
 
     private AuthResponse generateAuthResponse(User user, String message) {
-        String accessToken = jwtUtil.generateAccessToken(user.getPhone(), user.getRole().name());
+        String accessToken = jwtUtil.generateAccessToken(
+                user.getPhone(),
+                user.getRole().name()
+        );
+
         String refreshToken = jwtUtil.generateRefreshToken(user.getPhone());
 
         return AuthResponse.builder()
@@ -85,6 +89,7 @@ public class AuthService {
                 .phone(user.getPhone())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .role(user.getRole().name())
                 .build();
     }
 
@@ -150,6 +155,21 @@ public class AuthService {
         return AuthResponse.builder()
                 .message(message)
                 .phone(user.getPhone())
+                .role(user.getRole().name())
                 .build();
+    }
+
+    public void resendOtp(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException("Không tìm thấy tài khoản với email này!", HttpStatus.NOT_FOUND));
+
+        if (Boolean.TRUE.equals(user.getIsEmailVerified())) {
+            throw new AppException("Tài khoản này đã được xác thực!", HttpStatus.BAD_REQUEST);
+        }
+
+        String otpCode = otpService.generateAndSaveOtp(email);
+        emailService.sendOtpEmail(email, otpCode);
+
+        log.info("Đã gửi lại OTP cho: {}", email);
     }
 }
