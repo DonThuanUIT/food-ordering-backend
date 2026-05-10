@@ -15,5 +15,4 @@ public class FoodOrderBackendApplication {
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
         SpringApplication.run(FoodOrderBackendApplication.class, args);
     }
-
 }
