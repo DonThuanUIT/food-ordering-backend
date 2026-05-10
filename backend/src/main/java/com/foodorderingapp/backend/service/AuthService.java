@@ -83,6 +83,7 @@ public class AuthService {
         return AuthResponse.builder()
                 .message(message)
                 .phone(user.getPhone())
+                .role(user.getRole().name())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();

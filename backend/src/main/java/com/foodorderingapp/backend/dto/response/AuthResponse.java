@@ -12,6 +12,7 @@ import lombok.*;
 public class AuthResponse {
     private String message;
     private String phone;
+    private String role;
 
     private String accessToken;
     private String refreshToken;
