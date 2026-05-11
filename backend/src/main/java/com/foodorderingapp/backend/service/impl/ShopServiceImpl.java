@@ -10,9 +10,15 @@ import com.foodorderingapp.backend.repository.UserRepository;
 import com.foodorderingapp.backend.service.ShopService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cglib.core.Local;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -74,4 +80,46 @@ public class ShopServiceImpl implements ShopService {
                 .isActive(shop.getIsActive())
                 .build();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ShopResponse> getAllShops(Pageable pageable) {
+        Page<Shop> shopPage = shopRepository.findAllByStatusAndIsActiveTrue(ShopStatus.APPROVED, pageable);
+        List<ShopResponse> content = new ArrayList<>(shopPage.getContent().stream()
+                .map(this::mapToStudentResponse)
+                .toList());
+        content.sort((s1, s2) -> {
+            if (s1.getDisplayStatus().equals(s2.getDisplayStatus())) return 0;
+            return s1.getDisplayStatus().equals("OPENING") ? -1 : 1;
+        });
+        return new PageImpl<>(content, pageable, shopPage.getTotalElements());
+
+    }
+
+    private ShopResponse mapToStudentResponse(Shop shop) {
+        LocalTime now = LocalTime.now();
+        String displayStatus = "CLOSED";
+        if (shop.getOpenTime() != null && shop.getCloseTime() != null) {
+            if (shop.getCloseTime().isAfter(shop.getOpenTime())) {
+                if (now.isAfter(shop.getOpenTime()) && now.isBefore(shop.getCloseTime())) {
+                    displayStatus = "OPENING";
+                }
+            }
+        } else {
+            if(now.isAfter(shop.getOpenTime()) || now.isBefore(shop.getCloseTime())) {
+                displayStatus = "OPENING";
+            }
+        }
+        return ShopResponse.builder()
+                .id(shop.getId())
+                .name(shop.getName())
+                .description(shop.getDescription())
+                .openTime(shop.getOpenTime())
+                .closeTime(shop.getCloseTime())
+                .status(shop.getStatus().name())
+                .isActive(shop.getIsActive())
+                .displayStatus(displayStatus)
+                .build();
+    }
+
 }

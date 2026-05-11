@@ -23,4 +23,5 @@ public class ShopResponse {
     private LocalTime closeTime;
     private String status;
     private boolean isActive;
+    private String displayStatus;
 }

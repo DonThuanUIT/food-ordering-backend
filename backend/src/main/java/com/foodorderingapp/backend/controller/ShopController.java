@@ -5,6 +5,10 @@ import com.foodorderingapp.backend.dto.response.ShopResponse;
 import com.foodorderingapp.backend.service.ShopService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +17,7 @@ import java.security.Principal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/vendor/shops")
+@RequestMapping("/shops")
 @RequiredArgsConstructor
 public class ShopController {
     private final ShopService shopService;
@@ -30,7 +34,7 @@ public class ShopController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping
+    @GetMapping("/vendor")
     public ResponseEntity<List<ShopResponse>> getVendorShops(Principal principal) {
 
         String ownerPhone = principal.getName();
@@ -38,5 +42,15 @@ public class ShopController {
         List<ShopResponse> responses = shopService.getVendorShops(ownerPhone);
 
         return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ShopResponse>> getShops(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "name") String sortBy
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
+        return ResponseEntity.ok(shopService.getAllShops(pageable));
     }
 }
