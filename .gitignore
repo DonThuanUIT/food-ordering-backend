@@ -25,7 +25,9 @@ replay_pid*
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
-
+### Postman
+.postman/
+postman/
 ### OS Files ###
 .DS_Store
 Thumbs.db
