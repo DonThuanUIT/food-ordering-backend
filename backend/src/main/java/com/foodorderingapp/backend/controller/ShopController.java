@@ -1,6 +1,7 @@
 package com.foodorderingapp.backend.controller;
 
 import com.foodorderingapp.backend.dto.request.ShopCreateRequest;
+import com.foodorderingapp.backend.dto.response.ShopDetailResponse;
 import com.foodorderingapp.backend.dto.response.ShopResponse;
 import com.foodorderingapp.backend.service.ShopService;
 import jakarta.validation.Valid;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/shops")
@@ -53,5 +55,10 @@ public class ShopController {
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
         return ResponseEntity.ok(shopService.getAllShops(pageable, keyword));
+    }
+
+    @GetMapping("/{shopId}/detail-menu")
+    public ResponseEntity<ShopDetailResponse> getShopDetailAndMenu(@PathVariable UUID shopId){
+        return ResponseEntity.ok(shopService.getShopDetailWithMenu(shopId));
     }
 }

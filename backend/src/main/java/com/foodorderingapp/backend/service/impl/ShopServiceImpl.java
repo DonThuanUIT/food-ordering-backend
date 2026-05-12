@@ -1,10 +1,17 @@
 package com.foodorderingapp.backend.service.impl;
 
 import com.foodorderingapp.backend.dto.request.ShopCreateRequest;
+import com.foodorderingapp.backend.dto.response.CategoryMenuResponse;
+import com.foodorderingapp.backend.dto.response.FoodResponse;
+import com.foodorderingapp.backend.dto.response.ShopDetailResponse;
 import com.foodorderingapp.backend.dto.response.ShopResponse;
+import com.foodorderingapp.backend.entity.Category;
+import com.foodorderingapp.backend.entity.Food;
 import com.foodorderingapp.backend.entity.Shop;
 import com.foodorderingapp.backend.entity.User;
 import com.foodorderingapp.backend.entity.enums.ShopStatus;
+import com.foodorderingapp.backend.exception.AppException;
+import com.foodorderingapp.backend.repository.FoodRepository;
 import com.foodorderingapp.backend.repository.ShopRepository;
 import com.foodorderingapp.backend.repository.UserRepository;
 import com.foodorderingapp.backend.service.ShopService;
@@ -14,12 +21,15 @@ import org.springframework.cglib.core.Local;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -29,6 +39,7 @@ public class ShopServiceImpl implements ShopService {
 
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
+    private final FoodRepository foodRepository;
 
     @Override
     @Transactional
@@ -44,6 +55,7 @@ public class ShopServiceImpl implements ShopService {
                 .owner(owner)
                 .name(request.getName())
                 .description(request.getDescription())
+                .address(request.getAddress())
                 .openTime(request.getOpenTime())
                 .closeTime(request.getCloseTime())
                 .status(ShopStatus.PENDING)
@@ -74,6 +86,7 @@ public class ShopServiceImpl implements ShopService {
                 .id(shop.getId())
                 .name(shop.getName())
                 .description(shop.getDescription())
+                .address(shop.getAddress())
                 .openTime(shop.getOpenTime())
                 .closeTime(shop.getCloseTime())
                 .status(shop.getStatus().name())
@@ -126,6 +139,34 @@ public class ShopServiceImpl implements ShopService {
                 .isActive(shop.getIsActive())
                 .displayStatus(displayStatus)
                 .build();
+    }
+
+    public ShopDetailResponse getShopDetailWithMenu (UUID shopId){
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new AppException("Khong tim thay cua hang voi ID: " + shopId, HttpStatus.NOT_FOUND));
+        List<Food> foods = foodRepository.findAllByShopIdWithCategory(shopId);
+        Map<Category, List<Food>> grouped = foods.stream().collect(Collectors.groupingBy(Food::getCategory));
+        List<CategoryMenuResponse> menu = grouped.entrySet().stream()
+                .map(entry -> {
+                    Category cat = entry.getKey();
+                    List<FoodResponse> foodResponses = entry.getValue().stream()
+                            .map(f -> new FoodResponse(
+                                    f.getId(),
+                                    f.getName(),
+                                    f.getPrice(),
+                                    f.getIsAvailable(),
+                                    f.getImageUrl(),
+                                    f.getDescription()
+                            )).toList();
+                    return new CategoryMenuResponse(cat.getId(), cat.getName(), foodResponses);
+                }).toList();
+        return new ShopDetailResponse(
+                shop.getId(),
+                shop.getName(),
+                shop.getAddress(),
+                shop.getDescription(),
+                menu
+        );
     }
 
 }
