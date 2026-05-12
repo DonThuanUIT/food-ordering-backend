@@ -48,9 +48,10 @@ public class ShopController {
     public ResponseEntity<Page<ShopResponse>> getShops(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "name") String sortBy
+            @RequestParam(defaultValue = "name") String sortBy,
+            @RequestParam(required = false) String keyword
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
-        return ResponseEntity.ok(shopService.getAllShops(pageable));
+        return ResponseEntity.ok(shopService.getAllShops(pageable, keyword));
     }
 }

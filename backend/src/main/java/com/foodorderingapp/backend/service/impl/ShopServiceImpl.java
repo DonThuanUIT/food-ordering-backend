@@ -83,8 +83,14 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ShopResponse> getAllShops(Pageable pageable) {
-        Page<Shop> shopPage = shopRepository.findAllByStatusAndIsActiveTrue(ShopStatus.APPROVED, pageable);
+    public Page<ShopResponse> getAllShops(Pageable pageable, String keyword) {
+
+        Page<Shop> shopPage;
+        if(keyword != null && !keyword.trim().isEmpty()){
+            shopPage = shopRepository.searchShops(keyword, ShopStatus.APPROVED, pageable);
+        } else {
+            shopPage = shopRepository.findAllByStatusAndIsActiveTrue(ShopStatus.APPROVED, pageable);
+        }
         List<ShopResponse> content = new ArrayList<>(shopPage.getContent().stream()
                 .map(this::mapToStudentResponse)
                 .toList());
