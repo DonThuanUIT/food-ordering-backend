@@ -10,5 +10,5 @@ import java.util.List;
 public interface ShopService {
     ShopResponse createShop(ShopCreateRequest request, String ownerPhone);
     List<ShopResponse> getVendorShops(String ownerPhone);
-    Page<ShopResponse> getAllShops(Pageable pageable);
+    Page<ShopResponse> getAllShops(Pageable pageable, String keyword);
 }

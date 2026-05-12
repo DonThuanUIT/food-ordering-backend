@@ -50,4 +50,8 @@ public class Shop {
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status")
     private ShopStatus status = ShopStatus.PENDING;
+
+
+    @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private java.util.List<Food> foods;
 }
