@@ -20,7 +20,7 @@ public class ShopCreateRequest {
     @NotBlank(message = "Shop name cannot be left blank")
     @Size(max = 255, message = "shop name cannot exceed 255 characters")
     private String name;
-
+    private String address;
     private String description;
 
     @NotNull(message = "Opening hours cannot be left blank")
