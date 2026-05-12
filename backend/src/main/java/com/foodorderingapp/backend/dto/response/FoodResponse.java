@@ -22,6 +22,7 @@ public class FoodResponse {
     private String imageUrl;
     private Boolean isAvailable;
 
+    // Các trường bắt buộc cho Vendor
     private UUID categoryId;
     private String categoryName;
 }

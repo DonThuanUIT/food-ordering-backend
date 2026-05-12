@@ -37,6 +37,9 @@ public class Shop {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "address")
+    private String address;
+
     @Column(name = "open_time")
     private LocalTime openTime;
 

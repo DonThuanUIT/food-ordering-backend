@@ -17,6 +17,7 @@ public class ShopResponse {
     private UUID id;
     private String name;
     private String description;
+    private String address;
     @JsonFormat(pattern = "HH:mm")
     private LocalTime openTime;
     @JsonFormat(pattern = "HH:mm")
