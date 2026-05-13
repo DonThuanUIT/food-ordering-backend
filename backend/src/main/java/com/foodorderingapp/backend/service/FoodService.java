@@ -1,5 +1,6 @@
 package com.foodorderingapp.backend.service;
 
+import com.foodorderingapp.backend.dto.response.FoodExploreResponse;
 import com.foodorderingapp.backend.dto.request.FoodRequest;
 import com.foodorderingapp.backend.dto.response.FoodResponse;
 
@@ -7,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface FoodService {
+    org.springframework.data.domain.Page<FoodExploreResponse> getExploreFoods(org.springframework.data.domain.Pageable pageable);
     List<FoodResponse> getAllFoods(UUID shopId, UUID categoryId,String vendorPhone);
     FoodResponse createFood(UUID shopId, FoodRequest request, String vendorPhone);
     FoodResponse updateFood(UUID shopId, UUID foodId, FoodRequest request, String vendorPhone);
