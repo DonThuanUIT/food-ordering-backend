@@ -141,25 +141,39 @@ public class ShopServiceImpl implements ShopService {
                 .build();
     }
 
-    public ShopDetailResponse getShopDetailWithMenu (UUID shopId){
+    @Override
+    @Transactional(readOnly = true)
+    public ShopDetailResponse getShopDetailWithMenu(UUID shopId) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new AppException("Khong tim thay cua hang voi ID: " + shopId, HttpStatus.NOT_FOUND));
+
         List<Food> foods = foodRepository.findAllByShopIdWithCategory(shopId);
+
+        // 1. Gom nhóm món ăn theo Category
         Map<Category, List<Food>> grouped = foods.stream().collect(Collectors.groupingBy(Food::getCategory));
+
+        // 2. Lặp qua từng nhóm (entry) để chuyển đổi dữ liệu
         List<CategoryMenuResponse> menu = grouped.entrySet().stream()
                 .map(entry -> {
-                    Category cat = entry.getKey();
+                    Category cat = entry.getKey(); // Lấy thông tin Category
+
+                    // Chuyển List<Food> thành List<FoodResponse> bằng Builder của bạn
                     List<FoodResponse> foodResponses = entry.getValue().stream()
-                            .map(f -> new FoodResponse(
-                                    f.getId(),
-                                    f.getName(),
-                                    f.getPrice(),
-                                    f.getIsAvailable(),
-                                    f.getImageUrl(),
-                                    f.getDescription()
-                            )).toList();
+                            .map(f -> FoodResponse.builder()
+                                    .id(f.getId())
+                                    .name(f.getName())
+                                    .price(f.getPrice())
+                                    .isAvailable(f.getIsAvailable())
+                                    .imageUrl(f.getImageUrl())
+                                    .description(f.getDescription())
+                                    .build()
+                            ).toList();
+
+                    // Đóng gói thành CategoryMenuResponse
                     return new CategoryMenuResponse(cat.getId(), cat.getName(), foodResponses);
                 }).toList();
+
+        // 3. Trả về kết quả cuối cùng
         return new ShopDetailResponse(
                 shop.getId(),
                 shop.getName(),
