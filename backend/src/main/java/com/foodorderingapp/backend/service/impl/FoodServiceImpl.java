@@ -7,10 +7,13 @@ import com.foodorderingapp.backend.entity.Food;
 import com.foodorderingapp.backend.entity.Shop;
 import com.foodorderingapp.backend.exception.AppException;
 import com.foodorderingapp.backend.repository.CategoryRepository;
+import com.foodorderingapp.backend.dto.response.FoodExploreResponse;
 import com.foodorderingapp.backend.repository.FoodRepository;
 import com.foodorderingapp.backend.repository.ShopRepository;
 import com.foodorderingapp.backend.service.FoodService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -71,6 +74,9 @@ public class FoodServiceImpl implements FoodService {
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+    public Page<FoodExploreResponse> getExploreFoods(Pageable pageable){
+        return foodRepository.exploreFoods(java.time.LocalTime.now(), pageable);
     }
 
     @Override
@@ -147,5 +153,5 @@ public class FoodServiceImpl implements FoodService {
         food.setIsAvailable(!food.getIsAvailable());
 
         return mapToResponse(foodRepository.save(food));
-    }
-}
+
+}}

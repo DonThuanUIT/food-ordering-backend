@@ -1,5 +1,6 @@
 package com.foodorderingapp.backend.repository;
 
+import com.foodorderingapp.backend.dto.response.FoodExploreResponse;
 import com.foodorderingapp.backend.entity.Food;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -24,4 +25,21 @@ public interface FoodRepository extends JpaRepository<Food, UUID> {
 
     @Query("SELECT f FROM Food f JOIN FETCH f.category WHERE f.shop.id = :shopId")
     List<Food> findAllByShopIdWithCategory(@Param("shopId") UUID shopId);
+    @Query("SELECT new com.foodorderingapp.backend.dto.response.FoodExploreResponse(" +
+            "f.id, f.name, f.price, f.imageUrl, f.description, s.id, s.name, c.name) " +
+            "FROM Food f " +
+            "JOIN f.shop s " +
+            "JOIN f.category c " +
+            "WHERE f.isAvailable = true " +
+            "AND s.isActive = true " +
+            "AND s.status = 'APPROVED' " +
+            "AND (" +
+            "  (s.openTime < s.closeTime AND :now BETWEEN s.openTime AND s.closeTime) OR " +
+            "  (s.openTime > s.closeTime AND (:now >= s.openTime OR :now <= s.closeTime))" +
+            ")")
+    org.springframework.data.domain.Page<FoodExploreResponse> exploreFoods(
+            @Param("now") java.time.LocalTime now,
+            org.springframework.data.domain.Pageable pageable
+    );
+
 }
