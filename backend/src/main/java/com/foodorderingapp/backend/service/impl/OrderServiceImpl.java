@@ -69,5 +69,9 @@ public class OrderServiceImpl implements OrderService {
 
         return savedOrders;
     }
+    @Override
+    public List<Order> getActiveOrders(String phone) {
+        return orderRepository.findActiveOrdersByPhone(phone);
+    }
 
 }

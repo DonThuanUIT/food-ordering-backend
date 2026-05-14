@@ -7,11 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -20,11 +18,17 @@ import java.util.List;
 public class OrderController {
     private final OrderService orderService;
     @PostMapping("/checkout")
-    public ResponseEntity<List<Order>> checkout(@RequestBody CheckoutRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String phone = authentication.getName();
+    public ResponseEntity<List<Order>> checkout(@RequestBody CheckoutRequest request, Principal principal) {
+        String phone = principal.getName();
 
         List<Order> orders = orderService.createOrder(phone, request);
         return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<List<Order>> getActiveOrders(Principal principal) {
+        String phone = principal.getName();
+        List<Order> activeOrders = orderService.getActiveOrders(phone);
+        return ResponseEntity.ok(activeOrders);
     }
 }
