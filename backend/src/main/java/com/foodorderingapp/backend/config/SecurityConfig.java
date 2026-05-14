@@ -56,6 +56,8 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/shops/**").permitAll()
                         .requestMatchers("/foods/explore/**").permitAll()
+                        .requestMatchers("/cart/**").permitAll()
+                        .requestMatchers("/orders/**").permitAll()
 
                         // 2. Không gian của Vendor (Bắt buộc đăng nhập)
                         .requestMatchers("/vendor/**").authenticated()
