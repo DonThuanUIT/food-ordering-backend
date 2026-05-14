@@ -1,6 +1,8 @@
 package com.foodorderingapp.backend.service.impl;
 
+import com.foodorderingapp.backend.component.ShopValidationComponent;
 import com.foodorderingapp.backend.dto.request.ShopCreateRequest;
+import com.foodorderingapp.backend.dto.request.ShopUpdateRequest;
 import com.foodorderingapp.backend.dto.response.CategoryMenuResponse;
 import com.foodorderingapp.backend.dto.response.FoodResponse;
 import com.foodorderingapp.backend.dto.response.ShopDetailResponse;
@@ -40,6 +42,7 @@ public class ShopServiceImpl implements ShopService {
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
     private final FoodRepository foodRepository;
+    private final ShopValidationComponent shopValidationComponent;
 
     @Override
     @Transactional
@@ -183,4 +186,41 @@ public class ShopServiceImpl implements ShopService {
         );
     }
 
+    @Override
+    @Transactional
+    public ShopResponse updateShopProfile(UUID shopId, ShopUpdateRequest request, String vendorPhone) {
+        Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
+
+        if (!shop.getName().equals(request.getName()) &&
+                shopRepository.existsByNameAndOwnerId(request.getName(), shop.getOwner().getId())) {
+            throw new AppException("Bạn đã có một quán ăn khác mang tên này!", HttpStatus.BAD_REQUEST);
+        }
+
+        shop.setName(request.getName());
+        shop.setAddress(request.getAddress());
+        shop.setDescription(request.getDescription());
+        shop.setOpenTime(request.getOpenTime());
+        shop.setCloseTime(request.getCloseTime());
+
+        Shop updatedShop = shopRepository.save(shop);
+        log.info("Vendor {} vừa cập nhật thông tin quán: {}", vendorPhone, updatedShop.getId());
+
+        return mapToResponse(updatedShop);
+    }
+
+    @Override
+    @Transactional
+    public ShopResponse toggleShopStatus(UUID shopId, Boolean isActive, String vendorPhone) {
+        // 1. Sử dụng Component để check quyền sở hữu và lấy dữ liệu Shop
+        Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
+
+        // 2. Cập nhật trạng thái
+        shop.setIsActive(isActive);
+
+        // 3. Lưu và trả về kết quả
+        Shop updatedShop = shopRepository.save(shop);
+        log.info("Vendor {} đã thay đổi trạng thái quán {} thành: {}", vendorPhone, shopId, isActive);
+
+        return mapToResponse(updatedShop);
+    }
 }

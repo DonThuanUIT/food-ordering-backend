@@ -1,6 +1,7 @@
 package com.foodorderingapp.backend.service;
 
 import com.foodorderingapp.backend.dto.request.ShopCreateRequest;
+import com.foodorderingapp.backend.dto.request.ShopUpdateRequest;
 import com.foodorderingapp.backend.dto.response.ShopDetailResponse;
 import com.foodorderingapp.backend.dto.response.ShopResponse;
 import org.springframework.data.domain.Page;
@@ -14,4 +15,6 @@ public interface ShopService {
     List<ShopResponse> getVendorShops(String ownerPhone);
     Page<ShopResponse> getAllShops(Pageable pageable, String keyword);
     ShopDetailResponse getShopDetailWithMenu (UUID shopId);
+    ShopResponse updateShopProfile(UUID shopId, ShopUpdateRequest request, String vendorPhone);
+    ShopResponse toggleShopStatus(UUID shopId, Boolean isActive, String vendorPhone);
 }
