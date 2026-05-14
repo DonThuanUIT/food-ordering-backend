@@ -52,10 +52,15 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // 1. Các API Public (Không cần đăng nhập)
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/shops/**").permitAll()
                         .requestMatchers("/foods/explore/**").permitAll()
-                        .requestMatchers("/cart/**").permitAll()
+
+                        // 2. Không gian của Vendor (Bắt buộc đăng nhập)
+                        .requestMatchers("/vendor/**").authenticated()
+
+                        // 3. Các request còn lại (Bao gồm cả /cart) đều phải đăng nhập
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
