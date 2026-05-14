@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/shops/**").permitAll()
                         .requestMatchers("/foods/explore/**").permitAll()
+                        .requestMatchers("/cart/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
