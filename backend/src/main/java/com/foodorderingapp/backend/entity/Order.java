@@ -1,5 +1,6 @@
 package com.foodorderingapp.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.foodorderingapp.backend.entity.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -25,6 +26,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+
 public class Order {
 
     @Id
@@ -33,10 +35,12 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shop_id", nullable = false)
+    @JsonIgnore
     private Shop shop;
 
     @ManyToOne(fetch = FetchType.LAZY)

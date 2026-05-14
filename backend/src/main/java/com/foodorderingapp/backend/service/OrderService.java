@@ -8,4 +8,5 @@ import java.util.List;
 @Service
 public interface OrderService {
     List<Order> createOrder(String phone, CheckoutRequest request);
+    List<Order> getActiveOrders(String phone);
 }
