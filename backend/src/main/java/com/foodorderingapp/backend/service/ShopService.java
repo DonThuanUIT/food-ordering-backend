@@ -17,4 +17,7 @@ public interface ShopService {
     ShopDetailResponse getShopDetailWithMenu (UUID shopId);
     ShopResponse updateShopProfile(UUID shopId, ShopUpdateRequest request, String vendorPhone);
     ShopResponse toggleShopStatus(UUID shopId, Boolean isActive, String vendorPhone);
+
+    Page<ShopResponse> getShopsForAdmin(com.foodorderingapp.backend.entity.enums.ShopStatus status, Pageable pageable);
+    ShopResponse updateShopStatus(java.util.UUID shopId, com.foodorderingapp.backend.entity.enums.ShopStatus status);
 }
