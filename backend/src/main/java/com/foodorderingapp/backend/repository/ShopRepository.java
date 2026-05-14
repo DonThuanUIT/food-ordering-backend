@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -24,4 +25,5 @@ public interface ShopRepository extends JpaRepository<Shop, UUID> {
             "AND s.status = :status " +
             "AND s.isActive = true")
     Page<Shop> searchShops(@Param("keyword") String keyword,@Param("status") ShopStatus status, Pageable pageable);
+    Optional<Shop> findByIdAndOwner_Phone(UUID id, String phone);
 }
