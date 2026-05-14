@@ -1,51 +1,25 @@
 package com.foodorderingapp.backend.controller;
 
-import com.foodorderingapp.backend.dto.request.ShopCreateRequest;
 import com.foodorderingapp.backend.dto.response.ShopDetailResponse;
 import com.foodorderingapp.backend.dto.response.ShopResponse;
 import com.foodorderingapp.backend.service.ShopService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/shops")
+@RequestMapping("/shops") // API công khai cho Sinh viên/Khách (được permitAll ở SecurityConfig)
 @RequiredArgsConstructor
 public class ShopController {
     private final ShopService shopService;
 
-    @PostMapping
-    public ResponseEntity<ShopResponse> createShop(
-            @Valid @RequestBody ShopCreateRequest request,
-            Principal principal
-    ) {
-        String ownerPhone = principal.getName();
-
-        ShopResponse response = shopService.createShop(request, ownerPhone);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @GetMapping("/vendor")
-    public ResponseEntity<List<ShopResponse>> getVendorShops(Principal principal) {
-
-        String ownerPhone = principal.getName();
-
-        List<ShopResponse> responses = shopService.getVendorShops(ownerPhone);
-
-        return ResponseEntity.ok(responses);
-    }
-
+    // 1. Lấy danh sách quán ăn (Phân trang + Tìm kiếm) cho Sinh viên
     @GetMapping
     public ResponseEntity<Page<ShopResponse>> getShops(
             @RequestParam(defaultValue = "0") int page,
@@ -57,6 +31,7 @@ public class ShopController {
         return ResponseEntity.ok(shopService.getAllShops(pageable, keyword));
     }
 
+    // 2. Lấy chi tiết quán và Menu (đã gom nhóm) cho Sinh viên
     @GetMapping("/{shopId}/detail-menu")
     public ResponseEntity<ShopDetailResponse> getShopDetailAndMenu(@PathVariable UUID shopId){
         return ResponseEntity.ok(shopService.getShopDetailWithMenu(shopId));
