@@ -25,5 +25,6 @@ public interface ShopRepository extends JpaRepository<Shop, UUID> {
             "AND s.status = :status " +
             "AND s.isActive = true")
     Page<Shop> searchShops(@Param("keyword") String keyword,@Param("status") ShopStatus status, Pageable pageable);
+    Page<Shop> findAllByStatus(ShopStatus status, Pageable pageable);
     Optional<Shop> findByIdAndOwner_Phone(UUID id, String phone);
 }

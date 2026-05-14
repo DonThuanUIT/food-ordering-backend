@@ -16,10 +16,10 @@ import com.foodorderingapp.backend.exception.AppException;
 import com.foodorderingapp.backend.repository.FoodRepository;
 import com.foodorderingapp.backend.repository.ShopRepository;
 import com.foodorderingapp.backend.repository.UserRepository;
+import com.foodorderingapp.backend.service.EmailService;
 import com.foodorderingapp.backend.service.ShopService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cglib.core.Local;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +43,7 @@ public class ShopServiceImpl implements ShopService {
     private final UserRepository userRepository;
     private final FoodRepository foodRepository;
     private final ShopValidationComponent shopValidationComponent;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -151,16 +152,10 @@ public class ShopServiceImpl implements ShopService {
                 .orElseThrow(() -> new AppException("Khong tim thay cua hang voi ID: " + shopId, HttpStatus.NOT_FOUND));
 
         List<Food> foods = foodRepository.findAllByShopIdWithCategory(shopId);
-
-        // 1. Gom nhóm món ăn theo Category
         Map<Category, List<Food>> grouped = foods.stream().collect(Collectors.groupingBy(Food::getCategory));
-
-        // 2. Lặp qua từng nhóm (entry) để chuyển đổi dữ liệu
         List<CategoryMenuResponse> menu = grouped.entrySet().stream()
                 .map(entry -> {
                     Category cat = entry.getKey(); // Lấy thông tin Category
-
-                    // Chuyển List<Food> thành List<FoodResponse> bằng Builder của bạn
                     List<FoodResponse> foodResponses = entry.getValue().stream()
                             .map(f -> FoodResponse.builder()
                                     .id(f.getId())
@@ -171,12 +166,8 @@ public class ShopServiceImpl implements ShopService {
                                     .description(f.getDescription())
                                     .build()
                             ).toList();
-
-                    // Đóng gói thành CategoryMenuResponse
                     return new CategoryMenuResponse(cat.getId(), cat.getName(), foodResponses);
                 }).toList();
-
-        // 3. Trả về kết quả cuối cùng
         return new ShopDetailResponse(
                 shop.getId(),
                 shop.getName(),
@@ -211,16 +202,43 @@ public class ShopServiceImpl implements ShopService {
     @Override
     @Transactional
     public ShopResponse toggleShopStatus(UUID shopId, Boolean isActive, String vendorPhone) {
-        // 1. Sử dụng Component để check quyền sở hữu và lấy dữ liệu Shop
         Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
-
-        // 2. Cập nhật trạng thái
         shop.setIsActive(isActive);
-
-        // 3. Lưu và trả về kết quả
         Shop updatedShop = shopRepository.save(shop);
         log.info("Vendor {} đã thay đổi trạng thái quán {} thành: {}", vendorPhone, shopId, isActive);
 
+        return mapToResponse(updatedShop);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ShopResponse> getShopsForAdmin(ShopStatus status, Pageable pageable) {
+        // Sử dụng hàm findAllByStatus chúng ta vừa thêm vào Repository ở Bước 2
+        return shopRepository.findAllByStatus(status, pageable)
+                .map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional
+    public ShopResponse updateShopStatus(UUID shopId, ShopStatus status) {
+        // 1. Tìm quán ăn
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new AppException("Không tìm thấy quán ăn!", HttpStatus.NOT_FOUND));
+
+        // 2. Cập nhật trạng thái mới
+        shop.setStatus(status);
+        Shop updatedShop = shopRepository.save(shop);
+
+        // 3. [BE-Task 3] Gửi email thông báo kết quả cho Vendor
+        String vendorEmail = shop.getOwner().getEmail();
+        String subject = "Thông báo kết quả duyệt quán ăn: " + shop.getName();
+        String message = status == ShopStatus.APPROVED
+                ? "Chúc mừng! Quán ăn của bạn đã được duyệt. Bây giờ bạn có thể bắt đầu kinh doanh."
+                : "Rất tiếc, yêu cầu đăng ký quán ăn của bạn đã bị từ chối. Vui lòng liên hệ Admin để biết thêm chi tiết.";
+
+        emailService.sendShopStatusHtmlEmail(vendorEmail, shop.getName(), status == ShopStatus.APPROVED);
+
+        log.info("Admin vừa cập nhật trạng thái quán {} sang {}", shopId, status);
         return mapToResponse(updatedShop);
     }
 }

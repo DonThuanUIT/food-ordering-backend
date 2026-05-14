@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+    <h2 style="color: #2e6c80; text-align: center;">Thông báo từ Hệ thống</h2>
+    <p>Chào Chủ quán,</p>
+    <p>Hệ thống xin thông báo kết quả xét duyệt cho quán ăn <b th:text="${shopName}">Tên Quán</b> của bạn như sau:</p>
+    <div style="text-align: center; margin: 20px 0;">
+            <span th:style="'font-size: 24px; font-weight: bold; padding: 10px 20px; border-radius: 5px; color: ' + ${statusColor} + '; border: 2px solid ' + ${statusColor} + ';'"
+                  th:text="${statusText}">TRẠNG THÁI</span>
+    </div>
+    <p style="color: #555; font-size: 15px; line-height: 1.6;" th:utext="${detailMessage}">Nội dung chi tiết</p>
+    <hr style="border-top: 1px solid #eee; margin-top: 30px;" />
+    <p style="text-align: center; font-size: 12px; color: #999;">Đây là email tự động, vui lòng không trả lời lại.</p>
+</div>
+</body>
+</html>
