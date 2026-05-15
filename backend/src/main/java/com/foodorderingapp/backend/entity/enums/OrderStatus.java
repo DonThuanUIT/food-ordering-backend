@@ -9,5 +9,6 @@ public enum OrderStatus {
     DELIVERING,
     RECEIVED,
     FAILED,
-    REJECTED
+    REJECTED,
+    COMPLETED
 }

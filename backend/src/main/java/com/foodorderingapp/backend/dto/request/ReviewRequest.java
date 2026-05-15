@@ -1,0 +1,9 @@
+package com.foodorderingapp.backend.dto.request;
+
+import lombok.Data;
+
+@Data
+public class ReviewRequest {
+    private Integer rating;
+    private String comment;
+}
