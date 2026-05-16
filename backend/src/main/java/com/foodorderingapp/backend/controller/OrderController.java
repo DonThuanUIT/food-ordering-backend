@@ -2,6 +2,7 @@ package com.foodorderingapp.backend.controller;
 
 import com.foodorderingapp.backend.dto.request.CheckoutRequest;
 import com.foodorderingapp.backend.dto.request.ReviewRequest;
+import com.foodorderingapp.backend.dto.response.OrderResponse;
 import com.foodorderingapp.backend.entity.Order;
 import com.foodorderingapp.backend.entity.Review;
 import com.foodorderingapp.backend.service.OrderService;
@@ -22,23 +23,23 @@ import java.util.UUID;
 public class OrderController {
     private final OrderService orderService;
     @PostMapping("/checkout")
-    public ResponseEntity<List<Order>> checkout(@RequestBody CheckoutRequest request, Principal principal) {
+    public ResponseEntity<List<OrderResponse>> checkout(@RequestBody CheckoutRequest request, Principal principal) {
         String phone = principal.getName();
 
-        List<Order> orders = orderService.createOrder(phone, request);
+        List<OrderResponse> orders = orderService.createOrder(phone, request);
         return ResponseEntity.ok(orders);
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<Order>> getActiveOrders(Principal principal) {
+    public ResponseEntity<List<OrderResponse>> getActiveOrders(Principal principal) {
         String phone = principal.getName();
-        List<Order> activeOrders = orderService.getActiveOrders(phone);
+        List<OrderResponse> activeOrders = orderService.getActiveOrders(phone);
         return ResponseEntity.ok(activeOrders);
     }
 
     @GetMapping("/history")
-    public ResponseEntity<List<Order>> getOrderHistory (Principal principal){
-        List<Order> history = orderService.getOrderHistory(principal.getName());
+    public ResponseEntity<List<OrderResponse>> getOrderHistory (Principal principal){
+        List<OrderResponse> history = orderService.getOrderHistory(principal.getName());
 
         return ResponseEntity.ok(history);
     }

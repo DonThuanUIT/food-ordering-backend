@@ -2,8 +2,11 @@ package com.foodorderingapp.backend.controller;
 
 import com.foodorderingapp.backend.dto.request.ShopCreateRequest;
 import com.foodorderingapp.backend.dto.request.ShopUpdateRequest;
+import com.foodorderingapp.backend.dto.request.UpdateStatusRequest;
+import com.foodorderingapp.backend.dto.response.OrderResponse;
 import com.foodorderingapp.backend.dto.response.ShopResponse;
 import com.foodorderingapp.backend.entity.Shop;
+import com.foodorderingapp.backend.service.OrderService;
 import com.foodorderingapp.backend.service.ShopService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ import java.util.UUID;
 public class VendorShopController {
 
     private final ShopService shopService;
+    private final OrderService orderService;
 
     @PostMapping
     public ResponseEntity<ShopResponse> createShop(
@@ -62,5 +66,20 @@ public class VendorShopController {
         Boolean isActive = body.get("isActive");
         ShopResponse response = shopService.toggleShopStatus(shopId, isActive, vendorPhone);
         return ResponseEntity.ok(response);
+    }
+    @GetMapping("/{shopId}/orders")
+    public ResponseEntity<List<OrderResponse>> getShopOrders(
+            @PathVariable UUID shopId,
+            @RequestParam(required = false) String status,
+            Principal principal) {
+        return ResponseEntity.ok(orderService.getVendorOrders(shopId, status));
+    }
+    @PatchMapping("/{shopId}/orders/{orderId}/status")
+    public ResponseEntity<OrderResponse> updateOrderStatus(
+            @PathVariable UUID shopId,
+            @PathVariable UUID orderId,
+            @RequestBody UpdateStatusRequest request,
+            Principal principal) {
+        return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request));
     }
 }

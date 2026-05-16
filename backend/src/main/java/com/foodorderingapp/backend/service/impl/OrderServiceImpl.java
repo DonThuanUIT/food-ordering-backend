@@ -2,7 +2,10 @@ package com.foodorderingapp.backend.service.impl;
 
 import com.foodorderingapp.backend.dto.request.CheckoutRequest;
 import com.foodorderingapp.backend.dto.request.ReviewRequest;
+import com.foodorderingapp.backend.dto.request.UpdateStatusRequest;
 import com.foodorderingapp.backend.dto.response.CartItemResponse;
+import com.foodorderingapp.backend.dto.response.OrderDetailResponse;
+import com.foodorderingapp.backend.dto.response.OrderResponse;
 import com.foodorderingapp.backend.entity.*;
 import com.foodorderingapp.backend.entity.enums.OrderStatus;
 import com.foodorderingapp.backend.exception.AppException;
@@ -28,8 +31,32 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ReviewRepository reviewRepository;
+
+    private OrderResponse mapToOrderResponse(Order order) {
+        List<OrderDetailResponse> details = order.getOrderDetails().stream()
+                .map(d -> OrderDetailResponse.builder()
+                        .foodName(d.getFoodNameSnapshot())
+                        .price(d.getPriceSnapshot())
+                        .quantity(d.getQuantity())
+                        .build())
+                .collect(Collectors.toList());
+
+        return OrderResponse.builder()
+                .id(order.getId())
+                .shopName(order.getShop().getName())
+                .customerName(order.getUser().getFullName())
+                .customerPhone(order.getUser().getPhone())
+                .totalPrice(order.getTotalPrice())
+                .status(order.getStatus().name())
+                .building(order.getBuildingSnapshot())
+                .dropOff(order.getDropOffSnapshot())
+                .cancelReason(order.getCancelReason())
+                .createdAt(order.getCreatedAt())
+                .details(details)
+                .build();
+    }
     @Transactional
-    public List<Order> createOrder(String phone, CheckoutRequest request) {
+    public List<OrderResponse> createOrder(String phone, CheckoutRequest request) {
         User user = userRepository.findByPhone(phone)
                 .orElseThrow(() -> new AppException("User not found", HttpStatus.NOT_FOUND));
         List<CartItem> cartItems = cartItemRepository.findAllByUserPhone(phone);
@@ -67,16 +94,16 @@ public class OrderServiceImpl implements OrderService {
         }
         cartItemRepository.deleteAll(cartItems);
 
-        return savedOrders;
+        return savedOrders.stream().map(this::mapToOrderResponse).collect(Collectors.toList());
     }
     @Override
-    public List<Order> getActiveOrders(String phone) {
-        return orderRepository.findActiveOrdersByPhone(phone);
+    public List<OrderResponse> getActiveOrders(String phone) {
+        return orderRepository.findActiveOrdersByPhone(phone).stream().map(this::mapToOrderResponse).collect(Collectors.toList());
     }
 
     @Override
-    public List<Order> getOrderHistory(String phone){
-        return orderRepository.findOrderHistoryByPhone(phone);
+    public List<OrderResponse> getOrderHistory(String phone){
+        return orderRepository.findOrderHistoryByPhone(phone).stream().map(this::mapToOrderResponse).collect(Collectors.toList());
     }
     @Override
     @Transactional
@@ -101,6 +128,55 @@ public class OrderServiceImpl implements OrderService {
 
         return reviewRepository.save(review);
 
+    }
+    @Override
+    public List<OrderResponse> getVendorOrders(UUID shopId, String statusName) {
+        OrderStatus status = null;
+        if(status != null && !statusName.isEmpty()){
+            try {
+                status = OrderStatus.valueOf(statusName.toUpperCase());
+            } catch (IllegalArgumentException e){
+                throw new AppException("Trang thai don hang khong hop le", HttpStatus.BAD_REQUEST);
+            }
+        }
+        return orderRepository.findByShopIdAndStatus(shopId, status)
+                .stream().map(this::mapToOrderResponse).collect(Collectors.toList());
+    }
+    @Override
+    @Transactional
+    public OrderResponse updateOrderStatus(UUID orderId, UpdateStatusRequest request){
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException("Khong tim thay don hang", HttpStatus.NOT_FOUND));
+        OrderStatus newStatus;
+        OrderStatus currentStatus = order.getStatus();
+        try {
+            newStatus = OrderStatus.valueOf(request.getStatus().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new AppException("Trạng thái mới không hợp lệ", HttpStatus.BAD_REQUEST);
+        }
+        if (currentStatus == OrderStatus.COMPLETED) {
+            throw new AppException("Không thể thay đổi trạng thái của đơn hàng đã kết thúc", HttpStatus.BAD_REQUEST);
+        }
+        if (newStatus != OrderStatus.CANCELLED) {
+            boolean isValidFlow = switch (currentStatus) {
+                case PENDING -> newStatus == OrderStatus.CONFIRMED;
+                case CONFIRMED -> newStatus == OrderStatus.DELIVERING;
+                case DELIVERING -> newStatus == OrderStatus.COMPLETED;
+                default -> false;
+            };
+
+            if (!isValidFlow) {
+                throw new AppException("Sự thay đổi trạng thái từ " + currentStatus + " sang " + newStatus + " là không hợp lệ", HttpStatus.BAD_REQUEST);
+            }
+        }
+        if (newStatus == OrderStatus.CANCELLED) {
+            if (request.getCancelReason() == null || request.getCancelReason().isBlank()) {
+                throw new AppException("Bắt buộc phải cung cấp lý do khi hủy đơn hàng", HttpStatus.BAD_REQUEST);
+            }
+            order.setCancelReason(request.getCancelReason());
+        }
+        order.setStatus(newStatus);
+        return mapToOrderResponse(orderRepository.save(order));
     }
 
 
