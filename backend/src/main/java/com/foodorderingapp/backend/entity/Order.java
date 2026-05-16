@@ -74,4 +74,8 @@ public class Order {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
+
+    @Column(name = "cancel_reason")
+    private String cancelReason;
+
 }

@@ -1,6 +1,7 @@
 package com.foodorderingapp.backend.repository;
 
 import com.foodorderingapp.backend.entity.Order;
+import com.foodorderingapp.backend.entity.enums.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,4 +27,13 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "AND o.status IN ('COMPLETED', 'CANCELLED') " +
             "ORDER BY o.createdAt DESC")
     List<Order> findOrderHistoryByPhone(@Param("phone") String phone);
+    @Query("SELECT DISTINCT o FROM Order o " +
+            "LEFT JOIN FETCH o.orderDetails " +
+            "LEFT JOIN FETCH o.user " +
+            "LEFT JOIN FETCH o.shop " +
+            "WHERE o.shop.id = :shopId " +
+            "AND (:status IS NULL OR o.status = :status) " +
+            "ORDER BY o.createdAt DESC")
+    List<Order> findByShopIdAndStatus(@Param("shopId") UUID shopId,
+                                      @Param("status") OrderStatus status);
 }

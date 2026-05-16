@@ -10,5 +10,6 @@ public enum OrderStatus {
     RECEIVED,
     FAILED,
     REJECTED,
-    COMPLETED
+    COMPLETED,
+    CANCELLED
 }
