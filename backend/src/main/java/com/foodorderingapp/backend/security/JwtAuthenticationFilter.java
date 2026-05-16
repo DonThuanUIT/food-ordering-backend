@@ -48,6 +48,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (userPhone != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userPhone);
 
+                if (!userDetails.isAccountNonLocked()) {
+                    log.warn("Blocked access for locked user: {}", userPhone);
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"error\": \"Tài khoản của bạn đã bị khóa bởi hệ thống. Vui lòng liên hệ Admin!\"}");
+                    return;
+                }
+
                 if (jwtUtil.isTokenValid(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
