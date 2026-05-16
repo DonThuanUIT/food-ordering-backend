@@ -19,4 +19,11 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "WHERE o.user.phone = :phone " +
             "AND o.status IN ('PENDING', 'PREPARING', 'DELIVERING')")
     List<Order> findActiveOrdersByPhone(@Param("phone") String phone);
+    @Query("SELECT DISTINCT o FROM Order o " +
+            "LEFT JOIN FETCH o.orderDetails " +
+            "JOIN o.user u " +
+            "WHERE u.phone = :phone " +
+            "AND o.status IN ('COMPLETED', 'CANCELLED') " +
+            "ORDER BY o.createdAt DESC")
+    List<Order> findOrderHistoryByPhone(@Param("phone") String phone);
 }

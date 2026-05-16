@@ -1,17 +1,16 @@
 package com.foodorderingapp.backend.service.impl;
 
 import com.foodorderingapp.backend.dto.request.CheckoutRequest;
+import com.foodorderingapp.backend.dto.request.ReviewRequest;
 import com.foodorderingapp.backend.dto.response.CartItemResponse;
 import com.foodorderingapp.backend.entity.*;
 import com.foodorderingapp.backend.entity.enums.OrderStatus;
 import com.foodorderingapp.backend.exception.AppException;
-import com.foodorderingapp.backend.repository.CartItemRepository;
-import com.foodorderingapp.backend.repository.OrderDetailRepository;
-import com.foodorderingapp.backend.repository.OrderRepository;
-import com.foodorderingapp.backend.repository.UserRepository;
+import com.foodorderingapp.backend.repository.*;
 import com.foodorderingapp.backend.service.OrderService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.flywaydb.core.api.ErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +18,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,7 +27,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartItemRepository cartItemRepository;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
-
+    private final ReviewRepository reviewRepository;
     @Transactional
     public List<Order> createOrder(String phone, CheckoutRequest request) {
         User user = userRepository.findByPhone(phone)
@@ -73,5 +73,35 @@ public class OrderServiceImpl implements OrderService {
     public List<Order> getActiveOrders(String phone) {
         return orderRepository.findActiveOrdersByPhone(phone);
     }
+
+    @Override
+    public List<Order> getOrderHistory(String phone){
+        return orderRepository.findOrderHistoryByPhone(phone);
+    }
+    @Override
+    @Transactional
+    public Review createReview (UUID orderId, ReviewRequest request, String phone){
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException("Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND));
+        if (!order.getUser().getPhone().equals(phone)) {
+            throw new AppException("Bạn không có quyền đánh giá đơn hàng này", HttpStatus.FORBIDDEN);
+        }
+        if (!"COMPLETED".equalsIgnoreCase(order.getStatus().toString())) {
+            throw new AppException("Chỉ đơn hàng đã hoàn thành mới có thể đánh giá", HttpStatus.BAD_REQUEST);
+        }
+        if (reviewRepository.existsByOrderId(orderId)) {
+            throw new AppException("Đơn hàng này đã được đánh giá rồi", HttpStatus.CONFLICT);
+        }
+        Review review = Review.builder()
+                .order(order)
+                .user(order.getUser())
+                .rating(request.getRating())
+                .comment(request.getComment())
+                .build();
+
+        return reviewRepository.save(review);
+
+    }
+
 
 }
