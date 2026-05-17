@@ -48,4 +48,7 @@ public class User extends BaseEntity {
 
     @Column(name = "is_email_verified")
     private Boolean isEmailVerified = false;
+
+    @Column(name = "is_locked", nullable = false)
+    private Boolean isLocked = false;
 }
