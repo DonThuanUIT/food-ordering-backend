@@ -37,4 +37,8 @@ public class AuthController {
         return ResponseEntity.ok(authService.verifyOtp(request));
     }
 
+    @PostMapping("/resend-otp")
+    public ResponseEntity<AuthResponse> resendOtp(@Valid @RequestBody com.foodorderingapp.backend.dto.request.ResendOtpRequest request) {
+        return ResponseEntity.ok(authService.resendOtp(request));
+    }
 }
