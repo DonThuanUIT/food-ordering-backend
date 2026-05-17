@@ -1,9 +1,6 @@
 package com.foodorderingapp.backend.service.impl;
 
-import com.foodorderingapp.backend.dto.request.LoginRequest;
-import com.foodorderingapp.backend.dto.request.StudentRegisterRequest;
-import com.foodorderingapp.backend.dto.request.VendorRegisterRequest;
-import com.foodorderingapp.backend.dto.request.VerifyOtpRequest;
+import com.foodorderingapp.backend.dto.request.*;
 import com.foodorderingapp.backend.dto.response.AuthResponse;
 import com.foodorderingapp.backend.entity.Shop;
 import com.foodorderingapp.backend.entity.User;
@@ -181,5 +178,24 @@ public class AuthServiceImpl implements AuthService {
                 .message(message)
                 .phone(user.getPhone())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse resendOtp(ResendOtpRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException("Không tìm thấy tài khoản với email này!", HttpStatus.NOT_FOUND));
+
+        if (user.getIsEmailVerified()) {
+            throw new AppException("Tài khoản này đã được xác thực từ trước. Vui lòng đăng nhập!", HttpStatus.BAD_REQUEST);
+        }
+
+        String newOtpCode = otpService.generateAndSaveOtp(user.getEmail());
+
+        emailService.sendOtpEmail(user.getEmail(), newOtpCode);
+
+        log.info("Đã gửi lại mã OTP cho user: {}", user.getEmail());
+
+        return buildAuthResponse(user, "Mã OTP mới đã được gửi. Vui lòng kiểm tra email của bạn!");
     }
 }
