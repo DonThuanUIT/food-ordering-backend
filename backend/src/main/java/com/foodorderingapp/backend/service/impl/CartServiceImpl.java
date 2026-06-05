@@ -96,4 +96,15 @@ public class CartServiceImpl implements CartService {
                 item.getNote()
         );
     }
+    @Override
+    @Transactional
+    public void updateCartItemQuantity(UUID cartItemId, Integer quantity, String phone) {
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(()-> new AppException("Không tìm thấy món ăn trong giỏ hàng", HttpStatus.NOT_FOUND));
+        if(!cartItem.getCart().getUser().getPhone().equals(phone)) {
+            throw new AppException("Bạn không có quyền chỉnh sửa giỏ hàng này", HttpStatus.FORBIDDEN);
+        }
+        cartItem.setQuantity(quantity);
+        cartItemRepository.save(cartItem);
+    }
 }
