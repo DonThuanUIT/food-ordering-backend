@@ -63,6 +63,7 @@ public class SecurityConfig {
 
                         // 3. Không gian của Vendor (Bắt buộc đăng nhập)
                         .requestMatchers("/vendor/shops/**").permitAll()
+                        .requestMatchers("/cart/**").permitAll()
 
                         // 4. Các request còn lại (Bao gồm cả /cart, /orders) đều phải có Token đăng nhập
                                 .requestMatchers("/api/orders/**").authenticated()
