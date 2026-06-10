@@ -107,4 +107,14 @@ public class CartServiceImpl implements CartService {
         cartItem.setQuantity(quantity);
         cartItemRepository.save(cartItem);
     }
+    @Override
+    @Transactional
+    public void deleteCartItem(UUID cartItemId, String phone) {
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new AppException("Không tìm thấy món ăn trong giỏ hàng", HttpStatus.NOT_FOUND));
+        if(!cartItem.getCart().getUser().getPhone().equals(phone)) {
+            throw new AppException("Ban khong co quyen xoa muc gio hang nay", HttpStatus.FORBIDDEN);
+        }
+        cartItemRepository.delete(cartItem);
+    }
 }
