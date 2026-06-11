@@ -117,4 +117,9 @@ public class CartServiceImpl implements CartService {
         }
         cartItemRepository.delete(cartItem);
     }
+    @Override
+    @Transactional
+    public void clearShopCart(UUID shopId, String phone) {
+        cartItemRepository.deleteAllByShopIdAndUserPhone(shopId, phone);
+    }
 }

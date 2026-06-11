@@ -9,4 +9,5 @@ public interface CartService {
     CartResponse getCart(String phone);
     void updateCartItemQuantity (UUID cartItemId, Integer quantity, String phone);
     void deleteCartItem(UUID cartItemId, String phone);
+    void clearShopCart(UUID shopId, String phone);
 }

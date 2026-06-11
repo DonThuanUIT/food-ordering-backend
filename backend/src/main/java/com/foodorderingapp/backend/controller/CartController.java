@@ -44,6 +44,14 @@ public class CartController {
         cartService.deleteCartItem(cartItemId, principal.getName());
         return ResponseEntity.noContent().build();
     }
+    @DeleteMapping("/shops/{shopId}")
+    public ResponseEntity<Void> clearShopCart(
+            @PathVariable java.util.UUID shopId,
+            Principal principal
+    ) {
+        cartService.clearShopCart(shopId, principal.getName());
+        return ResponseEntity.noContent().build();
+    }
 
 
 }
