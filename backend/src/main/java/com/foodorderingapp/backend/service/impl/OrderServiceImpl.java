@@ -98,7 +98,14 @@ public class OrderServiceImpl implements OrderService {
     }
     @Override
     public List<OrderResponse> getActiveOrders(String phone) {
-        return orderRepository.findActiveOrdersByPhone(phone).stream().map(this::mapToOrderResponse).collect(Collectors.toList());
+        List<OrderStatus> activeStatuses = List.of(
+                OrderStatus.PENDING,
+                OrderStatus.CONFIRMED,
+                OrderStatus.DELIVERING
+        );
+        return orderRepository.findActiveOrdersByPhone(phone, activeStatuses).stream()
+                .map(this::mapToOrderResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -113,7 +120,7 @@ public class OrderServiceImpl implements OrderService {
         if (!order.getUser().getPhone().equals(phone)) {
             throw new AppException("Bạn không có quyền đánh giá đơn hàng này", HttpStatus.FORBIDDEN);
         }
-        if (!"COMPLETED".equalsIgnoreCase(order.getStatus().toString())) {
+        if (order.getStatus() != OrderStatus.COMPLETED) {
             throw new AppException("Chỉ đơn hàng đã hoàn thành mới có thể đánh giá", HttpStatus.BAD_REQUEST);
         }
         if (reviewRepository.existsByOrderId(orderId)) {
@@ -132,7 +139,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<OrderResponse> getVendorOrders(UUID shopId, String statusName) {
         OrderStatus status = null;
-        if(status != null && !statusName.isEmpty()){
+        if(statusName != null && !statusName.isEmpty()){
             try {
                 status = OrderStatus.valueOf(statusName.toUpperCase());
             } catch (IllegalArgumentException e){
