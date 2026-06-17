@@ -29,6 +29,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "AND o.status IN ('COMPLETED', 'CANCELLED') " +
             "ORDER BY o.createdAt DESC")
     List<Order> findOrderHistoryByPhone(@Param("phone") String phone);
+
+    @Query("SELECT o FROM Order o JOIN o.user u WHERE u.phone = :phone AND o.status = 'COMPLETED' AND o.createdAt BETWEEN :from AND :to")
+    List<Order> findCompletedOrdersBetween(@Param("phone") String phone, @Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
     @Query("SELECT DISTINCT o FROM Order o " +
             "LEFT JOIN FETCH o.orderDetails " +
             "LEFT JOIN FETCH o.user " +

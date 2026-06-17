@@ -13,7 +13,6 @@ import com.foodorderingapp.backend.repository.*;
 import com.foodorderingapp.backend.service.OrderService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.flywaydb.core.api.ErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +30,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ReviewRepository reviewRepository;
+    private final BuildingRepository buildingRepository;
+    private final DropOffPointRepository dropOffPointRepository;
 
     private OrderResponse mapToOrderResponse(Order order) {
         List<OrderDetailResponse> details = order.getOrderDetails().stream()
@@ -72,13 +73,28 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal totalForShop = shopItems.stream()
                     .map(item -> item.getFood().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
+            // Resolve building name and drop-off point - prefer IDs for clean data, fallback to raw strings
+            String buildingName = request.getBuildingName();
+            if (request.getBuildingId() != null) {
+                buildingName = buildingRepository.findById(request.getBuildingId())
+                        .map(Building::getName)
+                        .orElse(buildingName);
+            }
+
+            String dropOffPoint = request.getDropOffPoint();
+            if (request.getDropOffPointId() != null) {
+                dropOffPoint = dropOffPointRepository.findById(request.getDropOffPointId())
+                        .map(DropOffPoint::getName)
+                        .orElse(dropOffPoint);
+            }
+
             Order order = Order.builder()
                     .user(user)
                     .shop(shop)
                     .totalPrice(totalForShop)
                     .status(OrderStatus.PENDING)
-                    .buildingSnapshot(request.getBuildingName())
-                    .dropOffSnapshot(request.getDropOffPoint())
+                    .buildingSnapshot(buildingName)
+                    .dropOffSnapshot(dropOffPoint)
                     .build();
             List<OrderDetail> details = shopItems.stream().map(item ->
                     OrderDetail.builder()
