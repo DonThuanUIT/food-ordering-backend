@@ -1,6 +1,6 @@
 package com.foodorderingapp.backend.entity;
 
-import com.foodorderingapp.backend.entity.enums.ShopStatus;
+import com.foodorderingapp.backend.core.enums.ShopStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;

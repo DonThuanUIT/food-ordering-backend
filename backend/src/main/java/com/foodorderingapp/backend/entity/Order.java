@@ -1,7 +1,7 @@
 package com.foodorderingapp.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.foodorderingapp.backend.entity.enums.OrderStatus;
+import com.foodorderingapp.backend.core.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
 

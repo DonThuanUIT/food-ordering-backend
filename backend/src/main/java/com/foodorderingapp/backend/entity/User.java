@@ -1,6 +1,6 @@
 package com.foodorderingapp.backend.entity;
 
-import com.foodorderingapp.backend.entity.enums.UserRole;
+import com.foodorderingapp.backend.core.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
