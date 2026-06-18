@@ -10,6 +10,9 @@ public record ShopDetailResponse(
         String name,
         String address,
         String description,
+        String coverUrl,
+        String logoUrl,
+        Boolean isOpen,
         List<CategoryMenuResponse> menu
 ) {
 }

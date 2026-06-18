@@ -17,7 +17,8 @@ public interface ShopService {
     Page<ShopResponse> getAllShops(Pageable pageable, String keyword);
     ShopDetailResponse getShopDetailWithMenu (UUID shopId);
     ShopResponse updateShopProfile(UUID shopId, ShopUpdateRequest request, String vendorPhone);
-    ShopResponse toggleShopStatus(UUID shopId, Boolean isActive, String vendorPhone);
+    ShopResponse toggleShopStatus(UUID shopId, java.util.Map<String, Boolean> statusMap, String vendorPhone);
+    ShopResponse getVendorShopById(UUID shopId, String vendorPhone);
 
     Page<ShopResponse> getShopsForAdmin(ShopStatus status, Pageable pageable);
     ShopResponse updateShopStatus(UUID shopId, ShopStatus status);

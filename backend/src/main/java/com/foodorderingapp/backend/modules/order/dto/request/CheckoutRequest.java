@@ -10,4 +10,5 @@ public class CheckoutRequest {
     private String dropOffPoint;
     private UUID buildingId;
     private UUID dropOffPointId;
+    private String voucherCode;
 }

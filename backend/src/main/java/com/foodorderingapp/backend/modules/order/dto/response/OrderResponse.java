@@ -22,4 +22,6 @@ public class OrderResponse {
     private String cancelReason;
     private LocalDateTime createdAt;
     private List<OrderDetailResponse> details;
+    private String voucherCode;
+    private BigDecimal discountAmount;
 }

@@ -45,6 +45,16 @@ public class VendorShopController {
         return ResponseEntity.ok(responses);
     }
 
+    @GetMapping("/{shopId}")
+    public ResponseEntity<ShopResponse> getVendorShopById(
+            @PathVariable UUID shopId,
+            Principal principal
+    ) {
+        String vendorPhone = principal.getName();
+        ShopResponse response = shopService.getVendorShopById(shopId, vendorPhone);
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/{shopId}/profile")
     public ResponseEntity<ShopResponse> updateShopProfile(
             @PathVariable UUID shopId,
@@ -59,12 +69,11 @@ public class VendorShopController {
     @PatchMapping("/{shopId}/status")
     public ResponseEntity<ShopResponse> toggleShopStatus(
             @PathVariable UUID shopId,
-            @RequestBody Map<String, Boolean> body, // Dùng Map hứng JSON { "isActive": true/false }
+            @RequestBody Map<String, Boolean> body,
             Principal principal
     ) {
         String vendorPhone = principal.getName();
-        Boolean isActive = body.get("isActive");
-        ShopResponse response = shopService.toggleShopStatus(shopId, isActive, vendorPhone);
+        ShopResponse response = shopService.toggleShopStatus(shopId, body, vendorPhone);
         return ResponseEntity.ok(response);
     }
     @GetMapping("/{shopId}/orders")

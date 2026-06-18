@@ -64,6 +64,16 @@ public class ShopServiceImpl implements ShopService {
                 .closeTime(request.getCloseTime())
                 .status(ShopStatus.PENDING)
                 .isActive(true)
+                .isOpen(true)
+                .orderAlertsEnabled(true)
+                .dormPromotionsEnabled(true)
+                .turboModeEnabled(false)
+                .monFriOpenTime(request.getOpenTime())
+                .monFriCloseTime(request.getCloseTime())
+                .satOpenTime(request.getOpenTime())
+                .satCloseTime(request.getCloseTime())
+                .sunOpenTime(request.getOpenTime())
+                .sunCloseTime(request.getCloseTime())
                 .build();
 
         Shop savedShop = shopRepository.save(newShop);
@@ -95,6 +105,23 @@ public class ShopServiceImpl implements ShopService {
                 .closeTime(shop.getCloseTime())
                 .status(shop.getStatus().name())
                 .isActive(shop.getIsActive())
+                .coverUrl(shop.getCoverUrl())
+                .logoUrl(shop.getLogoUrl())
+                .isOpen(shop.getIsOpen())
+                .email(shop.getEmail())
+                .phone(shop.getPhone())
+                .bankName(shop.getBankName())
+                .bankAccountNumber(shop.getBankAccountNumber())
+                .bankAccountOwner(shop.getBankAccountOwner())
+                .orderAlertsEnabled(shop.getOrderAlertsEnabled())
+                .dormPromotionsEnabled(shop.getDormPromotionsEnabled())
+                .turboModeEnabled(shop.getTurboModeEnabled())
+                .monFriOpenTime(shop.getMonFriOpenTime())
+                .monFriCloseTime(shop.getMonFriCloseTime())
+                .satOpenTime(shop.getSatOpenTime())
+                .satCloseTime(shop.getSatCloseTime())
+                .sunOpenTime(shop.getSunOpenTime())
+                .sunCloseTime(shop.getSunCloseTime())
                 .build();
     }
 
@@ -122,15 +149,32 @@ public class ShopServiceImpl implements ShopService {
     private ShopResponse mapToStudentResponse(Shop shop) {
         LocalTime now = LocalTime.now();
         String displayStatus = "CLOSED";
-        if (shop.getOpenTime() != null && shop.getCloseTime() != null) {
-            if (shop.getCloseTime().isAfter(shop.getOpenTime())) {
-                if (now.isAfter(shop.getOpenTime()) && now.isBefore(shop.getCloseTime())) {
-                    displayStatus = "OPENING";
-                }
+        if (Boolean.TRUE.equals(shop.getIsOpen())) {
+            LocalTime open = shop.getOpenTime();
+            LocalTime close = shop.getCloseTime();
+            
+            java.time.DayOfWeek day = java.time.LocalDate.now().getDayOfWeek();
+            if (day == java.time.DayOfWeek.SATURDAY && shop.getSatOpenTime() != null && shop.getSatCloseTime() != null) {
+                open = shop.getSatOpenTime();
+                close = shop.getSatCloseTime();
+            } else if (day == java.time.DayOfWeek.SUNDAY && shop.getSunOpenTime() != null && shop.getSunCloseTime() != null) {
+                open = shop.getSunOpenTime();
+                close = shop.getSunCloseTime();
+            } else if (shop.getMonFriOpenTime() != null && shop.getMonFriCloseTime() != null) {
+                open = shop.getMonFriOpenTime();
+                close = shop.getMonFriCloseTime();
             }
-        } else {
-            if(now.isAfter(shop.getOpenTime()) || now.isBefore(shop.getCloseTime())) {
-                displayStatus = "OPENING";
+
+            if (open != null && close != null) {
+                if (close.isAfter(open)) {
+                    if (now.isAfter(open) && now.isBefore(close)) {
+                        displayStatus = "OPENING";
+                    }
+                } else {
+                    if (now.isAfter(open) || now.isBefore(close)) {
+                        displayStatus = "OPENING";
+                    }
+                }
             }
         }
         return ShopResponse.builder()
@@ -142,6 +186,9 @@ public class ShopServiceImpl implements ShopService {
                 .status(shop.getStatus().name())
                 .isActive(shop.getIsActive())
                 .displayStatus(displayStatus)
+                .coverUrl(shop.getCoverUrl())
+                .logoUrl(shop.getLogoUrl())
+                .isOpen(shop.getIsOpen())
                 .build();
     }
 
@@ -173,6 +220,9 @@ public class ShopServiceImpl implements ShopService {
                 shop.getName(),
                 shop.getAddress(),
                 shop.getDescription(),
+                shop.getCoverUrl(),
+                shop.getLogoUrl(),
+                shop.getIsOpen(),
                 menu
         );
     }
@@ -182,16 +232,76 @@ public class ShopServiceImpl implements ShopService {
     public ShopResponse updateShopProfile(UUID shopId, ShopUpdateRequest request, String vendorPhone) {
         Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
 
-        if (!shop.getName().equals(request.getName()) &&
-                shopRepository.existsByNameAndOwnerId(request.getName(), shop.getOwner().getId())) {
-            throw new AppException("Bạn đã có một quán ăn khác mang tên này!", HttpStatus.BAD_REQUEST);
+        if (request.getName() != null) {
+            if (!shop.getName().equals(request.getName()) &&
+                    shopRepository.existsByNameAndOwnerId(request.getName(), shop.getOwner().getId())) {
+                throw new AppException("Bạn đã có một quán ăn khác mang tên này!", HttpStatus.BAD_REQUEST);
+            }
+            shop.setName(request.getName());
         }
-
-        shop.setName(request.getName());
-        shop.setAddress(request.getAddress());
-        shop.setDescription(request.getDescription());
-        shop.setOpenTime(request.getOpenTime());
-        shop.setCloseTime(request.getCloseTime());
+        if (request.getAddress() != null) {
+            shop.setAddress(request.getAddress());
+        }
+        if (request.getDescription() != null) {
+            shop.setDescription(request.getDescription());
+        }
+        if (request.getOpenTime() != null) {
+            shop.setOpenTime(request.getOpenTime());
+        }
+        if (request.getCloseTime() != null) {
+            shop.setCloseTime(request.getCloseTime());
+        }
+        if (request.getCoverUrl() != null) {
+            shop.setCoverUrl(request.getCoverUrl());
+        }
+        if (request.getLogoUrl() != null) {
+            shop.setLogoUrl(request.getLogoUrl());
+        }
+        if (request.getIsOpen() != null) {
+            shop.setIsOpen(request.getIsOpen());
+        }
+        if (request.getEmail() != null) {
+            shop.setEmail(request.getEmail());
+        }
+        if (request.getPhone() != null) {
+            shop.setPhone(request.getPhone());
+        }
+        if (request.getBankName() != null) {
+            shop.setBankName(request.getBankName());
+        }
+        if (request.getBankAccountNumber() != null) {
+            shop.setBankAccountNumber(request.getBankAccountNumber());
+        }
+        if (request.getBankAccountOwner() != null) {
+            shop.setBankAccountOwner(request.getBankAccountOwner());
+        }
+        if (request.getOrderAlertsEnabled() != null) {
+            shop.setOrderAlertsEnabled(request.getOrderAlertsEnabled());
+        }
+        if (request.getDormPromotionsEnabled() != null) {
+            shop.setDormPromotionsEnabled(request.getDormPromotionsEnabled());
+        }
+        if (request.getTurboModeEnabled() != null) {
+            shop.setTurboModeEnabled(request.getTurboModeEnabled());
+        }
+        if (request.getMonFriOpenTime() != null) {
+            shop.setMonFriOpenTime(request.getMonFriOpenTime());
+        }
+        if (request.getMonFriCloseTime() != null) {
+            shop.setMonFriCloseTime(request.getMonFriCloseTime());
+        }
+        if (request.getSatOpenTime() != null) {
+            shop.setSatOpenTime(request.getSatOpenTime());
+        }
+        if (request.getSatCloseTime() != null) {
+            shop.setSatCloseTime(request.getSatCloseTime());
+        }
+        if (request.getSunOpenTime() != null) {
+            shop.setSunOpenTime(request.getSunOpenTime());
+        }
+        if (request.getSunCloseTime() != null) {
+            shop.setSunCloseTime(request.getSunCloseTime());
+        }
 
         Shop updatedShop = shopRepository.save(shop);
         log.info("Vendor {} vừa cập nhật thông tin quán: {}", vendorPhone, updatedShop.getId());
@@ -201,13 +311,25 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     @Transactional
-    public ShopResponse toggleShopStatus(UUID shopId, Boolean isActive, String vendorPhone) {
+    public ShopResponse toggleShopStatus(UUID shopId, Map<String, Boolean> statusMap, String vendorPhone) {
         Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
-        shop.setIsActive(isActive);
+        if (statusMap.containsKey("isActive")) {
+            shop.setIsActive(statusMap.get("isActive"));
+        }
+        if (statusMap.containsKey("isOpen")) {
+            shop.setIsOpen(statusMap.get("isOpen"));
+        }
         Shop updatedShop = shopRepository.save(shop);
-        log.info("Vendor {} đã thay đổi trạng thái quán {} thành: {}", vendorPhone, shopId, isActive);
+        log.info("Vendor {} đã thay đổi trạng thái quán {} với map: {}", vendorPhone, shopId, statusMap);
 
         return mapToResponse(updatedShop);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ShopResponse getVendorShopById(UUID shopId, String vendorPhone) {
+        Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
+        return mapToResponse(shop);
     }
 
     @Override
