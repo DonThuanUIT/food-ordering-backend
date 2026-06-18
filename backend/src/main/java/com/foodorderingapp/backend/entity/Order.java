@@ -78,4 +78,10 @@ public class Order {
     @Column(name = "cancel_reason")
     private String cancelReason;
 
+    @Column(name = "voucher_code")
+    private String voucherCode;
+
+    @Column(name = "discount_amount")
+    @Builder.Default
+    private BigDecimal discountAmount = BigDecimal.ZERO;
 }

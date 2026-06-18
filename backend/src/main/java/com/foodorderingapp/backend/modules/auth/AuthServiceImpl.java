@@ -7,6 +7,7 @@ import com.foodorderingapp.backend.modules.auth.dto.request.VendorRegisterReques
 import com.foodorderingapp.backend.modules.auth.dto.request.VerifyOtpRequest;
 import com.foodorderingapp.backend.modules.auth.dto.response.AuthResponse;
 import com.foodorderingapp.backend.entity.Shop;
+import com.foodorderingapp.backend.entity.ShopSettings;
 import com.foodorderingapp.backend.entity.User;
 import com.foodorderingapp.backend.core.enums.ShopStatus;
 import com.foodorderingapp.backend.core.enums.UserRole;
@@ -78,6 +79,25 @@ public class AuthServiceImpl implements AuthService {
         shop.setCloseTime(request.getCloseTime());
         shop.setStatus(ShopStatus.PENDING);
         shop.setIsActive(false);
+        shop.setIsOpen(true);
+
+        ShopSettings settings = ShopSettings.builder()
+                .shop(shop)
+                .coverUrl("")
+                .logoUrl("")
+                .isOpen(true)
+                .orderAlertsEnabled(true)
+                .dormPromotionsEnabled(true)
+                .turboModeEnabled(false)
+                .monFriOpenTime(request.getOpenTime())
+                .monFriCloseTime(request.getCloseTime())
+                .satOpenTime(request.getOpenTime())
+                .satCloseTime(request.getCloseTime())
+                .sunOpenTime(request.getOpenTime())
+                .sunCloseTime(request.getCloseTime())
+                .build();
+        shop.setSettings(settings);
+
         shopRepository.save(shop);
 
         // 4. Gửi OTP

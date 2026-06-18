@@ -46,14 +46,22 @@ public class Shop {
     @Column(name = "close_time")
     private LocalTime closeTime;
 
+    @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status")
     private ShopStatus status = ShopStatus.PENDING;
 
+    @Builder.Default
+    @Column(name = "is_open")
+    private Boolean isOpen = true;
+
+    @OneToOne(mappedBy = "shop", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private ShopSettings settings;
 
     @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private java.util.List<Food> foods;

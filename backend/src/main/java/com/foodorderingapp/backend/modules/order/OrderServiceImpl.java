@@ -17,6 +17,9 @@ import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
 import com.foodorderingapp.backend.modules.building.repository.BuildingRepository;
 import com.foodorderingapp.backend.modules.building.repository.DropOffPointRepository;
 import com.foodorderingapp.backend.modules.order.OrderService;
+import com.foodorderingapp.backend.modules.voucher.repository.VoucherRepository;
+import com.foodorderingapp.backend.entity.Voucher;
+import com.foodorderingapp.backend.entity.Food;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,6 +41,7 @@ public class OrderServiceImpl implements OrderService {
     private final ReviewRepository reviewRepository;
     private final BuildingRepository buildingRepository;
     private final DropOffPointRepository dropOffPointRepository;
+    private final VoucherRepository voucherRepository;
 
     private OrderResponse mapToOrderResponse(Order order) {
         List<OrderDetailResponse> details = order.getOrderDetails().stream()
@@ -60,6 +64,8 @@ public class OrderServiceImpl implements OrderService {
                 .cancelReason(order.getCancelReason())
                 .createdAt(order.getCreatedAt())
                 .details(details)
+                .voucherCode(order.getVoucherCode())
+                .discountAmount(order.getDiscountAmount())
                 .build();
     }
     @Transactional
@@ -94,13 +100,62 @@ public class OrderServiceImpl implements OrderService {
                         .orElse(dropOffPoint);
             }
 
+            BigDecimal discountAmount = BigDecimal.ZERO;
+            String appliedVoucherCode = null;
+
+            if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
+                java.util.Optional<Voucher> voucherOpt = voucherRepository.findByShopIdAndCode(shop.getId(), request.getVoucherCode().trim().toUpperCase());
+                if (voucherOpt.isPresent()) {
+                    Voucher voucher = voucherOpt.get();
+                    java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                    boolean isValid = Boolean.TRUE.equals(voucher.getIsActive())
+                            && (voucher.getStartDate() == null || voucher.getStartDate().isBefore(now))
+                            && (voucher.getEndDate() == null || voucher.getEndDate().isAfter(now));
+
+                    if (isValid) {
+                        BigDecimal applicableTotal = BigDecimal.ZERO;
+                        if ("ALL_MENU".equals(voucher.getApplyType())) {
+                            applicableTotal = totalForShop;
+                        } else if ("SPECIFIC_FOODS".equals(voucher.getApplyType()) && voucher.getFoods() != null) {
+                            java.util.Set<UUID> applicableFoodIds = voucher.getFoods().stream().map(Food::getId).collect(Collectors.toSet());
+                            for (CartItem item : shopItems) {
+                                if (applicableFoodIds.contains(item.getFood().getId())) {
+                                    BigDecimal itemTotal = item.getFood().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                                    applicableTotal = applicableTotal.add(itemTotal);
+                                }
+                            }
+                        }
+
+                        if (applicableTotal.compareTo(voucher.getMinOrderValue()) >= 0 && applicableTotal.compareTo(BigDecimal.ZERO) > 0) {
+                            if ("FIXED_AMOUNT".equals(voucher.getDiscountType())) {
+                                discountAmount = voucher.getDiscountValue();
+                                if (discountAmount.compareTo(totalForShop) > 0) {
+                                    discountAmount = totalForShop;
+                                }
+                            } else if ("PERCENTAGE".equals(voucher.getDiscountType())) {
+                                discountAmount = applicableTotal.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+                                if (voucher.getMaxDiscountValue() != null && discountAmount.compareTo(voucher.getMaxDiscountValue()) > 0) {
+                                    discountAmount = voucher.getMaxDiscountValue();
+                                }
+                                if (discountAmount.compareTo(totalForShop) > 0) {
+                                    discountAmount = totalForShop;
+                                }
+                            }
+                            appliedVoucherCode = voucher.getCode();
+                        }
+                    }
+                }
+            }
+
             Order order = Order.builder()
                     .user(user)
                     .shop(shop)
-                    .totalPrice(totalForShop)
+                    .totalPrice(totalForShop.subtract(discountAmount))
                     .status(OrderStatus.PENDING)
                     .buildingSnapshot(buildingName)
                     .dropOffSnapshot(dropOffPoint)
+                    .voucherCode(appliedVoucherCode)
+                    .discountAmount(discountAmount)
                     .build();
             List<OrderDetail> details = shopItems.stream().map(item ->
                     OrderDetail.builder()
