@@ -1,31 +1,25 @@
--- Add is_open column to shops
+-- Add new settings columns to shops
+ALTER TABLE "shops" ADD COLUMN "cover_url" varchar(255);
+ALTER TABLE "shops" ADD COLUMN "logo_url" varchar(255);
 ALTER TABLE "shops" ADD COLUMN "is_open" boolean DEFAULT true;
+ALTER TABLE "shops" ADD COLUMN "email" varchar(255);
+ALTER TABLE "shops" ADD COLUMN "phone" varchar(255);
+ALTER TABLE "shops" ADD COLUMN "bank_name" varchar(255);
+ALTER TABLE "shops" ADD COLUMN "bank_account_number" varchar(255);
+ALTER TABLE "shops" ADD COLUMN "bank_account_owner" varchar(255);
+ALTER TABLE "shops" ADD COLUMN "order_alerts_enabled" boolean DEFAULT true;
+ALTER TABLE "shops" ADD COLUMN "dorm_promotions_enabled" boolean DEFAULT true;
+ALTER TABLE "shops" ADD COLUMN "turbo_mode_enabled" boolean DEFAULT false;
+ALTER TABLE "shops" ADD COLUMN "mon_fri_open_time" time;
+ALTER TABLE "shops" ADD COLUMN "mon_fri_close_time" time;
+ALTER TABLE "shops" ADD COLUMN "sat_open_time" time;
+ALTER TABLE "shops" ADD COLUMN "sat_close_time" time;
+ALTER TABLE "shops" ADD COLUMN "sun_open_time" time;
+ALTER TABLE "shops" ADD COLUMN "sun_close_time" time;
 
 -- Add discount columns to orders
 ALTER TABLE "orders" ADD COLUMN "voucher_code" varchar(255);
 ALTER TABLE "orders" ADD COLUMN "discount_amount" decimal DEFAULT 0;
-
--- Create shop_settings table
-CREATE TABLE "shop_settings" (
-    "shop_id" uuid PRIMARY KEY,
-    "cover_url" varchar(255),
-    "logo_url" varchar(255),
-    "email" varchar(255),
-    "phone" varchar(255),
-    "bank_name" varchar(255),
-    "bank_account_number" varchar(255),
-    "bank_account_owner" varchar(255),
-    "order_alerts_enabled" boolean DEFAULT true,
-    "dorm_promotions_enabled" boolean DEFAULT true,
-    "turbo_mode_enabled" boolean DEFAULT false,
-    "mon_fri_open_time" time,
-    "mon_fri_close_time" time,
-    "sat_open_time" time,
-    "sat_close_time" time,
-    "sun_open_time" time,
-    "sun_close_time" time,
-    CONSTRAINT fk_settings_shop FOREIGN KEY ("shop_id") REFERENCES "shops"("id") ON DELETE CASCADE
-);
 
 -- Create vouchers table
 CREATE TABLE "vouchers" (
