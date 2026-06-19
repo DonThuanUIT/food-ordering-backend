@@ -2,11 +2,13 @@ package com.foodorderingapp.backend.modules.order.repository;
 
 import com.foodorderingapp.backend.entity.Order;
 import com.foodorderingapp.backend.core.enums.OrderStatus;
+import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 @Repository
@@ -41,4 +43,17 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "ORDER BY o.createdAt DESC")
     List<Order> findByShopIdAndStatus(@Param("shopId") UUID shopId,
                                       @Param("status") OrderStatus status);
+    @Query(value = "SELECT " +
+            "  COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN total_price ELSE 0 END), 0) AS totalRevenue, " +
+            "  COUNT(*) AS totalOrders, " +
+            "  ROUND((COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS completionRate, " +
+            "  ROUND(COALESCE(AVG(CASE WHEN status = 'COMPLETED' THEN total_price END), 0), 2) AS averageOrderValue " +
+            "FROM orders " +
+            "WHERE shop_id = :shopId " +
+            "  AND created_at BETWEEN :startDate AND :endDate",
+            nativeQuery = true)
+    VendorDashboardResponse getVendorDashboardStats(
+            @Param("shopId") UUID shopId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 }
