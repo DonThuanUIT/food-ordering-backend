@@ -67,7 +67,7 @@ public class SecurityConfig {
                         .requestMatchers("/cart/**").permitAll()
 
                         // 4. Các request còn lại (Bao gồm cả /cart, /orders) đều phải có Token đăng nhập
-                                .requestMatchers("/api/orders/**").authenticated()
+                                .requestMatchers("/orders/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

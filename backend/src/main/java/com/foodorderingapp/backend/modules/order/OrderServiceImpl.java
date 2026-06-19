@@ -10,6 +10,7 @@ import com.foodorderingapp.backend.entity.*;
 import com.foodorderingapp.backend.core.enums.OrderStatus;
 import com.foodorderingapp.backend.core.exception.AppException;
 import com.foodorderingapp.backend.modules.cart.repository.CartItemRepository;
+import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardResponse;
 import com.foodorderingapp.backend.modules.order.repository.OrderRepository;
 import com.foodorderingapp.backend.modules.order.repository.OrderDetailRepository;
 import com.foodorderingapp.backend.modules.order.repository.ReviewRepository;
@@ -261,6 +262,17 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setStatus(newStatus);
         return mapToOrderResponse(orderRepository.save(order));
+    }
+    @Override
+    public VendorDashboardResponse getVendorDashboard(UUID shopId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate) {
+        if (startDate == null) {
+            startDate = java.time.LocalDateTime.now().minusDays(30);
+        }
+        if (endDate == null) {
+            endDate = java.time.LocalDateTime.now();
+        }
+
+        return orderRepository.getVendorDashboardStats(shopId, startDate, endDate);
     }
 
 

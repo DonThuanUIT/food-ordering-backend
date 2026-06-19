@@ -6,7 +6,9 @@ import com.foodorderingapp.backend.modules.order.dto.response.OrderResponse;
 import com.foodorderingapp.backend.entity.Order;
 import com.foodorderingapp.backend.entity.Review;
 import com.foodorderingapp.backend.modules.order.OrderService;
+import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,5 +54,14 @@ public class OrderController {
     ) {
         Review review = orderService.createReview(orderId, request, principal.getName());
         return new ResponseEntity<>(review, HttpStatus.CREATED);
+    }
+    @GetMapping("/{shopId}/dashboard")
+    public ResponseEntity<VendorDashboardResponse> getDashboardStats(
+            @PathVariable UUID shopId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+
+        VendorDashboardResponse data = orderService.getVendorDashboard(shopId, startDate, endDate);
+        return ResponseEntity.ok(data);
     }
 }
