@@ -6,6 +6,7 @@ import com.foodorderingapp.backend.modules.order.dto.request.UpdateStatusRequest
 import com.foodorderingapp.backend.modules.order.dto.response.OrderResponse;
 import com.foodorderingapp.backend.entity.Order;
 import com.foodorderingapp.backend.entity.Review;
+import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardDto;
 import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardResponse;
 import org.springframework.stereotype.Service;
 
@@ -22,5 +23,5 @@ public interface OrderService {
     Review createReview(UUID orderId, ReviewRequest request, String phone);
     List<OrderResponse> getVendorOrders(UUID shopId, String statusName);
     OrderResponse updateOrderStatus(UUID orderId, UpdateStatusRequest request);
-    VendorDashboardResponse getVendorDashboard(UUID shopId, LocalDateTime startDate, LocalDateTime endDate);
+    VendorDashboardDto getVendorDashboard(UUID shopId, LocalDateTime startDate, LocalDateTime endDate);
 }

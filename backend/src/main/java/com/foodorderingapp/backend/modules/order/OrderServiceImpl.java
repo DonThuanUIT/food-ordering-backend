@@ -4,13 +4,11 @@ import com.foodorderingapp.backend.modules.order.dto.request.CheckoutRequest;
 import com.foodorderingapp.backend.modules.order.dto.request.ReviewRequest;
 import com.foodorderingapp.backend.modules.order.dto.request.UpdateStatusRequest;
 import com.foodorderingapp.backend.modules.cart.dto.response.CartItemResponse;
-import com.foodorderingapp.backend.modules.order.dto.response.OrderDetailResponse;
-import com.foodorderingapp.backend.modules.order.dto.response.OrderResponse;
+import com.foodorderingapp.backend.modules.order.dto.response.*;
 import com.foodorderingapp.backend.entity.*;
 import com.foodorderingapp.backend.core.enums.OrderStatus;
 import com.foodorderingapp.backend.core.exception.AppException;
 import com.foodorderingapp.backend.modules.cart.repository.CartItemRepository;
-import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardResponse;
 import com.foodorderingapp.backend.modules.order.repository.OrderRepository;
 import com.foodorderingapp.backend.modules.order.repository.OrderDetailRepository;
 import com.foodorderingapp.backend.modules.order.repository.ReviewRepository;
@@ -27,6 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -264,15 +263,61 @@ public class OrderServiceImpl implements OrderService {
         return mapToOrderResponse(orderRepository.save(order));
     }
     @Override
-    public VendorDashboardResponse getVendorDashboard(UUID shopId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate) {
-        if (startDate == null) {
-            startDate = java.time.LocalDateTime.now().minusDays(30);
-        }
-        if (endDate == null) {
-            endDate = java.time.LocalDateTime.now();
+    public VendorDashboardDto getVendorDashboard(UUID shopId, LocalDateTime startDate, LocalDateTime endDate) {
+        // 1. Khởi tạo ngày mặc định nếu client không truyền lên (30 ngày gần đây)
+        if (startDate == null) startDate = LocalDateTime.now().minusDays(30);
+        if (endDate == null) endDate = LocalDateTime.now();
+
+        // 2. Lấy dữ liệu tổng quan thô từ câu Query Số 1 (Bảng tổng hợp doanh thu, tổng số đơn)
+        VendorDashboardResponse overview = orderRepository.getVendorDashboardStats(shopId, startDate, endDate);
+
+        // 3. Xử lý yêu cầu 2: Chuyển đổi dữ liệu List<Map> thành List<TrendData>
+        List<TrendData> trends = orderRepository.getOrderTrends(shopId, startDate, endDate).stream()
+                .map(row -> TrendData.builder()
+                        .date(java.time.LocalDate.parse(row.get("date").toString()))
+                        .revenue(((Number) row.get("revenue")).longValue())
+                        .orderCount(((Number) row.get("order_count")).longValue())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        // 4. Xử lý yêu cầu 3: Chuyển đổi dữ liệu Top sản phẩm thành List<TopProductData>
+        List<TopProductData> topProducts = orderRepository.getTopSellingFoods(shopId, startDate, endDate).stream()
+                .map(row -> TopProductData.builder()
+                        .foodId(null) // Đặt null vì thiết kế database dùng snapshot không lưu ID món ăn gốc
+                        .foodName(row.get("food_name") != null ? row.get("food_name").toString() : "Món ăn ẩn")
+                        .quantitySold(row.get("quantity_sold") != null ? ((Number) row.get("quantity_sold")).longValue() : 0L)
+                        .revenue(row.get("revenue") != null ? ((Number) row.get("revenue")).longValue() : 0L)
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        // 5. Xử lý yêu cầu 4: Đếm chi tiết số đơn của TẤT CẢ các trạng thái phục vụ Pie Chart
+        java.util.Map<String, Long> statusBreakdown = new java.util.HashMap<>();
+        // Tạo giá trị mặc định để tránh hiển thị thiếu trên UI Frontend
+        statusBreakdown.put("PENDING", 0L);
+        statusBreakdown.put("PREPARING", 0L);
+        statusBreakdown.put("DELIVERING", 0L);
+        statusBreakdown.put("COMPLETED", 0L);
+        statusBreakdown.put("CANCELLED", 0L);
+
+        List<Map<String, Object>> dbStatus = orderRepository.getOrderStatusBreakdown(shopId, startDate, endDate);
+        if (dbStatus != null) {
+            for (Map<String, Object> row : dbStatus) {
+                if (row.get("status") != null && row.get("count") != null) {
+                    statusBreakdown.put(row.get("status").toString(), ((Number) row.get("count")).longValue());
+                }
+            }
         }
 
-        return orderRepository.getVendorDashboardStats(shopId, startDate, endDate);
+        // 6. Ráp nối tất cả nguyên liệu đã chế biến vào VendorDashboardDto để trả về cho Controller
+        return VendorDashboardDto.builder()
+                .totalRevenue(overview != null && overview.getTotalRevenue() != null ? overview.getTotalRevenue() : java.math.BigDecimal.ZERO)
+                .totalOrders(overview != null && overview.getTotalOrders() != null ? overview.getTotalOrders() : 0L)
+                .completionRate(overview != null && overview.getCompletionRate() != null ? overview.getCompletionRate() : 0.0)
+                .averageOrderValue(overview != null && overview.getAverageOrderValue() != null ? overview.getAverageOrderValue() : java.math.BigDecimal.ZERO)
+                .orderTrends(trends)
+                .topSellingProducts(topProducts)
+                .orderStatusBreakdown(statusBreakdown)
+                .build();
     }
 
 

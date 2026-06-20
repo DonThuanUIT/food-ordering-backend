@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 @Repository
 
@@ -53,6 +54,43 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "  AND created_at BETWEEN :startDate AND :endDate",
             nativeQuery = true)
     VendorDashboardResponse getVendorDashboardStats(
+            @Param("shopId") UUID shopId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+    @Query(value = "SELECT TO_CHAR(created_at, 'YYYY-MM-DD') as date, " +
+            "  COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN total_price ELSE 0 END), 0) as revenue, " +
+            "  COUNT(*) as order_count " +
+            "FROM orders " +
+            "WHERE shop_id = :shopId AND created_at BETWEEN :startDate AND :endDate " +
+            "GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD') " +
+            "ORDER BY date ASC", nativeQuery = true)
+    List<Map<String, Object>> getOrderTrends(
+            @Param("shopId") UUID shopId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    @Query(value = "SELECT " +
+            "  od.food_name_snapshot as food_name, " + // Lấy thẳng tên từ snapshot
+            "  SUM(od.quantity) as quantity_sold, " +
+            "  SUM(od.price_snapshot * od.quantity) as revenue " + // Tính doanh thu từ price_snapshot
+            "FROM order_details od " +
+            "JOIN orders o ON od.order_id = o.id " +
+            "WHERE o.shop_id = :shopId " +
+            "  AND o.status = 'COMPLETED' " +
+            "  AND o.created_at BETWEEN :startDate AND :endDate " +
+            "GROUP BY od.food_name_snapshot " + // Nhóm theo tên món ăn snapshot
+            "ORDER BY quantity_sold DESC " +
+            "LIMIT 5", nativeQuery = true)
+    List<Map<String, Object>> getTopSellingFoods(
+            @Param("shopId") UUID shopId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    @Query(value = "SELECT status, COUNT(*) as count " +
+            "FROM orders " +
+            "WHERE shop_id = :shopId AND created_at BETWEEN :startDate AND :endDate " +
+            "GROUP BY status", nativeQuery = true)
+    List<Map<String, Object>> getOrderStatusBreakdown(
             @Param("shopId") UUID shopId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
