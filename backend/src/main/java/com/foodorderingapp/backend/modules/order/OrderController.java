@@ -6,6 +6,7 @@ import com.foodorderingapp.backend.modules.order.dto.response.OrderResponse;
 import com.foodorderingapp.backend.entity.Order;
 import com.foodorderingapp.backend.entity.Review;
 import com.foodorderingapp.backend.modules.order.OrderService;
+import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardDto;
 import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -56,12 +57,12 @@ public class OrderController {
         return new ResponseEntity<>(review, HttpStatus.CREATED);
     }
     @GetMapping("/{shopId}/dashboard")
-    public ResponseEntity<VendorDashboardResponse> getDashboardStats(
+    public ResponseEntity<VendorDashboardDto> getDashboardStats(
             @PathVariable UUID shopId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
 
-        VendorDashboardResponse data = orderService.getVendorDashboard(shopId, startDate, endDate);
+        VendorDashboardDto data = orderService.getVendorDashboard(shopId, startDate, endDate);
         return ResponseEntity.ok(data);
     }
 }
