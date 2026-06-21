@@ -94,4 +94,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             @Param("shopId") UUID shopId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
+    @Query(value = "SELECT " +
+            "  COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN total_price ELSE 0 END), 0) AS totalRevenue, " +
+            "  COUNT(*) AS totalOrders " +
+            "FROM orders", nativeQuery = true)
+    Map<String, Object> getSystemOverviewStats();
 }
