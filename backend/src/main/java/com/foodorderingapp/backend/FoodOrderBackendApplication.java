@@ -27,14 +27,11 @@ public class FoodOrderBackendApplication {
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
         SpringApplication.run(FoodOrderBackendApplication.class, args);
 
-        //Colors, don't care it
         String RESET = "\u001B[0m";
         String BOLD = "\u001B[1m";
         String GREEN = "\u001B[32m";
         String CYAN = "\u001B[36m";
-        String YELLOW = "\u001B[33m";
-        // Define the application context -----
-        String title = "FOOD ORDERING BACKEND";
+        String title = "FOOD ORDERING SERVICE SYSTEM";
         String status = "RUNNING SUCCESSFULLY";
         String timestamp = java.time.LocalDateTime.now().withNano(0).toString();
         System.out.println(CYAN + "╔══════════════════════════════════════════════════════════╗" + RESET);

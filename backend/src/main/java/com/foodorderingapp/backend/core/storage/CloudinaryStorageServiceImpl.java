@@ -1,9 +1,8 @@
-package com.foodorderingapp.backend.modules.upload;
+package com.foodorderingapp.backend.core.storage;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.foodorderingapp.backend.core.exception.AppException;
-import com.foodorderingapp.backend.modules.upload.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

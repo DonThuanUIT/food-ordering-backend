@@ -1,6 +1,6 @@
 package com.foodorderingapp.backend.modules.upload;
 
-import com.foodorderingapp.backend.modules.upload.StorageService;
+import com.foodorderingapp.backend.core.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
