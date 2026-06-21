@@ -58,16 +58,13 @@ public class SecurityConfig {
                         .requestMatchers("/foods/explore/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/buildings/**").permitAll()
 
-
                         // 2. Không gian của Admin (Chỉ User có quyền ADMIN mới được vào)
-                       // .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/admin/**").permitAll()
-                        // 3. Không gian của Vendor (Bắt buộc đăng nhập)
-                        .requestMatchers("/vendor/shops/**").permitAll()
-                        .requestMatchers("/cart/**").permitAll()
+                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
 
-                        // 4. Các request còn lại (Bao gồm cả /cart, /orders) đều phải có Token đăng nhập
-                                .requestMatchers("/orders/**").permitAll()
+                        // 3. Không gian của Vendor (Bắt buộc là VENDOR)
+                        .requestMatchers("/vendor/**").hasAuthority("ROLE_VENDOR")
+
+                        // 4. Các request còn lại (Bao gồm cả /cart, /orders, /upload) đều phải có Token đăng nhập
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

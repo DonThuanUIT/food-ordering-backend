@@ -1,4 +1,4 @@
-package com.foodorderingapp.backend.modules.upload;
+package com.foodorderingapp.backend.core.storage;
 
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
