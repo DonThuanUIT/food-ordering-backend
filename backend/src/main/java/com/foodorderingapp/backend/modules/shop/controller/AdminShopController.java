@@ -1,7 +1,9 @@
 package com.foodorderingapp.backend.modules.shop.controller;
+import com.foodorderingapp.backend.modules.shop.dto.request.ShopStatusRequest;
 import com.foodorderingapp.backend.modules.shop.dto.response.ShopResponse;
 import com.foodorderingapp.backend.core.enums.ShopStatus;
 import com.foodorderingapp.backend.modules.shop.service.ShopService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -34,10 +36,10 @@ public class AdminShopController {
     @PatchMapping("/{shopId}/status")
     public ResponseEntity<ShopResponse> updateShopStatus(
             @PathVariable UUID shopId,
-            @RequestBody Map<String, String> body
+            @Valid @RequestBody ShopStatusRequest request
     ) {
-        ShopStatus newStatus = ShopStatus.valueOf(body.get("status").toUpperCase());
-        return ResponseEntity.ok(shopService.updateShopStatus(shopId, newStatus));
+        ShopResponse response = shopService.updateShopStatus(shopId, request);
+        return ResponseEntity.ok(response);
     }
     @GetMapping("/{shopId}")
     public ResponseEntity<ShopResponse> getShopDetailForAdmin(@PathVariable UUID shopId) {

@@ -1,6 +1,7 @@
 package com.foodorderingapp.backend.modules.shop.service;
 
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopCreateRequest;
+import com.foodorderingapp.backend.modules.shop.dto.request.ShopStatusRequest;
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopUpdateRequest;
 import com.foodorderingapp.backend.modules.shop.dto.response.ShopDetailResponse;
 import com.foodorderingapp.backend.modules.shop.dto.response.ShopResponse;
@@ -21,6 +22,6 @@ public interface ShopService {
     ShopResponse getVendorShopById(UUID shopId, String vendorPhone);
 
     Page<ShopResponse> getShopsForAdmin(ShopStatus status, Pageable pageable);
-    ShopResponse updateShopStatus(UUID shopId, ShopStatus status);
+    ShopResponse updateShopStatus(UUID shopId, ShopStatusRequest request);
     ShopResponse getShopDetailForAdmin(UUID shopId);
 }
