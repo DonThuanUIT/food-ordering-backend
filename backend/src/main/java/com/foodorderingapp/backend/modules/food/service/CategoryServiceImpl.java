@@ -6,6 +6,7 @@ import com.foodorderingapp.backend.entity.Category;
 import com.foodorderingapp.backend.entity.Shop;
 import com.foodorderingapp.backend.core.exception.AppException;
 import com.foodorderingapp.backend.modules.food.repository.CategoryRepository;
+import com.foodorderingapp.backend.modules.food.repository.FoodRepository;
 import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
 import com.foodorderingapp.backend.modules.food.service.CategoryService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final ShopRepository shopRepository;
-
+    private final FoodRepository foodRepository;
     private Shop validateShopOwnership(UUID shopId, String vendorPhone) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new AppException("The store doesn't exist!", HttpStatus.NOT_FOUND));
@@ -97,8 +98,10 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findByIdAndShopId(categoryId, shopId)
                 .orElseThrow(() -> new AppException("Category does not exist in this store!", HttpStatus.NOT_FOUND));
 
-        // TODO: Mở rộng sau này -> Check xem Category có đang chứa FoodItem nào không trước khi xóa cứng.
-        // Tạm thời cho phép xóa cứng.
+        boolean hasFood = foodRepository.existsByCategoryId(categoryId);
+        if (hasFood) {
+            throw new AppException("Cannot delete this category because it contains food items!", HttpStatus.BAD_REQUEST);
+        }
         categoryRepository.delete(category);
     }
 }
