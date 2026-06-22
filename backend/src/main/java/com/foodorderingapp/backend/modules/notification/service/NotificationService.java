@@ -1,8 +1,10 @@
 package com.foodorderingapp.backend.modules.notification.service;
 
+import com.foodorderingapp.backend.entity.Notification;
 import com.foodorderingapp.backend.entity.User;
 import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
 import com.foodorderingapp.backend.entity.UserDevice;
+import com.foodorderingapp.backend.modules.notification.repository.NotificationRepository;
 import com.foodorderingapp.backend.modules.notification.repository.UserDeviceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -72,6 +75,40 @@ public class NotificationService {
             } else {
                 log.warn("Security Alert: User {} tried to delete FCM token of another user", currentUser.getPhone());
             }
+        }
+    }
+
+    private final FcmService fcmService;
+    private final NotificationRepository notificationRepository;
+
+    /**
+     * Hàm dùng chung để bắn thông báo cho bất kỳ tính năng nào.
+     */
+    @Transactional
+    public void notifyUser(User user, String title, String body, String type, UUID referenceId) {
+
+        // 1. Lưu lịch sử vào Database Neon (Để User xem lại trong tab Thông báo)
+        Notification dbNotification = Notification.builder()
+                .user(user)
+                .title(title)
+                .body(body)
+                .type(type)
+                .referenceId(referenceId)
+                .build();
+        notificationRepository.save(dbNotification);
+
+        // 2. Chuẩn bị cục dữ liệu ẩn cho Mobile App (Để bắt sự kiện onClick nhảy đúng màn hình)
+        Map<String, String> dataPayload = Map.of(
+                "type", type,
+                "referenceId", referenceId != null ? referenceId.toString() : ""
+        );
+
+        // 3. Tìm tất cả điện thoại mà User này đang đăng nhập
+        Iterable<UserDevice> devices = userDeviceRepository.findAllByUserId(user.getId());
+
+        // 4. Duyệt qua từng máy và bắn thông báo
+        for (UserDevice device : devices) {
+            fcmService.sendPushNotification(device.getFcmToken(), title, body, dataPayload);
         }
     }
 }
