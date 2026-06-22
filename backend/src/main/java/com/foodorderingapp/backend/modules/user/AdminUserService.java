@@ -1,5 +1,6 @@
 package com.foodorderingapp.backend.modules.user;
 
+import com.foodorderingapp.backend.core.exception.AppException;
 import com.foodorderingapp.backend.modules.user.dto.response.UserResponse;
 import com.foodorderingapp.backend.entity.User;
 import com.foodorderingapp.backend.core.enums.UserRole;
@@ -8,6 +9,7 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,6 +68,19 @@ public class AdminUserService {
         }
 
         user.setIsLocked(!user.getIsLocked());
+        userRepository.save(user);
+    }
+    @Transactional
+    public void updateUserLockStatus(UUID userId, boolean isLocked) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException("Không tìm thấy người dùng", HttpStatus.NOT_FOUND));
+
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new AppException("Lỗi bảo mật: Không được phép khóa tài khoản ADMIN!", HttpStatus.BAD_REQUEST);
+        }
+
+        // Gán trực tiếp trạng thái truyền từ FE gửi lên
+        user.setIsLocked(isLocked);
         userRepository.save(user);
     }
 }
