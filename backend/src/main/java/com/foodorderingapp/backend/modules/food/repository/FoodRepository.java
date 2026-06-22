@@ -15,7 +15,7 @@ import java.util.UUID;
 public interface FoodRepository extends JpaRepository<Food, UUID> {
 
     boolean existsByNameAndShopId(String name, UUID shopId);
-
+    boolean existsByCategoryId(UUID categoryId);
     Optional<Food> findByIdAndShopId(UUID id, UUID shopId);
 
     @Query("SELECT f FROM Food f JOIN FETCH f.category WHERE f.shop.id = :shopId " +
