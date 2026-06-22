@@ -2,6 +2,7 @@ package com.foodorderingapp.backend.modules.shop.service;
 
 import com.foodorderingapp.backend.core.component.ShopValidationComponent;
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopCreateRequest;
+import com.foodorderingapp.backend.modules.shop.dto.request.ShopStatusRequest;
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopUpdateRequest;
 import com.foodorderingapp.backend.modules.food.dto.response.CategoryMenuResponse;
 import com.foodorderingapp.backend.modules.food.dto.response.FoodResponse;
@@ -400,25 +401,23 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     @Transactional
-    public ShopResponse updateShopStatus(UUID shopId, ShopStatus status) {
-        // 1. Tìm quán ăn
+    public ShopResponse updateShopStatus(UUID shopId, com.foodorderingapp.backend.modules.shop.dto.request.ShopStatusRequest request) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new AppException("Không tìm thấy quán ăn!", HttpStatus.NOT_FOUND));
 
-        // 2. Cập nhật trạng thái mới
-        shop.setStatus(status);
+        if (shop.getStatus() != ShopStatus.PENDING) {
+            throw new AppException("Thao tác không hợp lệ. Cửa hàng này đã được xử lý duyệt hoặc từ chối trước đó!", HttpStatus.BAD_REQUEST);
+        }
+
+        ShopStatus targetStatus = ShopStatus.valueOf(request.status());
+
+        shop.setStatus(targetStatus);
         Shop updatedShop = shopRepository.save(shop);
 
-        // 3. [BE-Task 3] Gửi email thông báo kết quả cho Vendor
         String vendorEmail = shop.getOwner().getEmail();
-        String subject = "Thông báo kết quả duyệt quán ăn: " + shop.getName();
-        String message = status == ShopStatus.APPROVED
-                ? "Chúc mừng! Quán ăn của bạn đã được duyệt. Bây giờ bạn có thể bắt đầu kinh doanh."
-                : "Rất tiếc, yêu cầu đăng ký quán ăn của bạn đã bị từ chối. Vui lòng liên hệ Admin để biết thêm chi tiết.";
+        emailService.sendShopStatusHtmlEmail(vendorEmail, shop.getName(), targetStatus == ShopStatus.APPROVED);
 
-        emailService.sendShopStatusHtmlEmail(vendorEmail, shop.getName(), status == ShopStatus.APPROVED);
-
-        log.info("Admin vừa cập nhật trạng thái quán {} sang {}", shopId, status);
+        log.info("Admin vừa cập nhật trạng thái quán {} sang {}", shopId, targetStatus);
         return mapToResponse(updatedShop);
     }
     @Override
