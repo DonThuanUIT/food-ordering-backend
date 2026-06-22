@@ -421,4 +421,12 @@ public class ShopServiceImpl implements ShopService {
         log.info("Admin vừa cập nhật trạng thái quán {} sang {}", shopId, status);
         return mapToResponse(updatedShop);
     }
+    @Override
+    @Transactional(readOnly = true)
+    public ShopResponse getShopDetailForAdmin(UUID shopId) {
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new AppException("Không tìm thấy quán ăn với ID: " + shopId, HttpStatus.NOT_FOUND));
+
+        return this.mapToResponse(shop);
+    }
 }

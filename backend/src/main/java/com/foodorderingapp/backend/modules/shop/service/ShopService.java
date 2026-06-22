@@ -22,4 +22,5 @@ public interface ShopService {
 
     Page<ShopResponse> getShopsForAdmin(ShopStatus status, Pageable pageable);
     ShopResponse updateShopStatus(UUID shopId, ShopStatus status);
+    ShopResponse getShopDetailForAdmin(UUID shopId);
 }

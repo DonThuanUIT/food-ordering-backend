@@ -39,4 +39,9 @@ public class AdminShopController {
         ShopStatus newStatus = ShopStatus.valueOf(body.get("status").toUpperCase());
         return ResponseEntity.ok(shopService.updateShopStatus(shopId, newStatus));
     }
+    @GetMapping("/{shopId}")
+    public ResponseEntity<ShopResponse> getShopDetailForAdmin(@PathVariable UUID shopId) {
+        ShopResponse shopDetail = shopService.getShopDetailForAdmin(shopId);
+        return ResponseEntity.ok(shopDetail);
+    }
 }
