@@ -37,7 +37,8 @@ public class AdminUserService {
                 String keyword = "%" + search.toLowerCase() + "%";
                 predicates.add(criteriaBuilder.or(
                         criteriaBuilder.like(root.get("phone"), keyword),
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), keyword)
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), keyword),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("fullName")), keyword)
                 ));
             }
 
