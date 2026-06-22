@@ -60,7 +60,8 @@ public class SecurityConfig {
                         .requestMatchers("/ws-chat/**").permitAll()
 
                         // 2. Không gian của Admin (Chỉ User có quyền ADMIN mới được vào)
-                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+                        //.requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/admin/**").permitAll()
 
 
                         // 3. Không gian của Vendor (Bắt buộc là VENDOR)

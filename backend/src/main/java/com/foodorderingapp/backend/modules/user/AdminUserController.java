@@ -1,8 +1,10 @@
 package com.foodorderingapp.backend.modules.user;
 
+import com.foodorderingapp.backend.modules.user.dto.request.UpdateUserLockRequest;
 import com.foodorderingapp.backend.modules.user.dto.response.UserResponse;
 import com.foodorderingapp.backend.core.enums.UserRole;
 import com.foodorderingapp.backend.modules.user.AdminUserService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,8 +42,8 @@ public class AdminUserController {
     }
 
     @PatchMapping("/{userId}/lock")
-    public ResponseEntity<String> toggleLock(@PathVariable UUID userId) {
-        adminUserService.toggleUserLock(userId);
+    public ResponseEntity<String> toggleLock(@PathVariable UUID userId, @Valid @RequestBody UpdateUserLockRequest request) {
+        adminUserService.updateUserLockStatus(userId, request.getLocked());
         return ResponseEntity.ok("Đã thay đổi trạng thái khóa của người dùng thành công.");
     }
 }
