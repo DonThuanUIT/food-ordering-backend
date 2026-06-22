@@ -57,6 +57,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/shops/**").permitAll()
                         .requestMatchers("/foods/explore/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/buildings/**").permitAll()
+                        .requestMatchers("/ws-chat/**").permitAll()
 
                         // 2. Không gian của Admin (Chỉ User có quyền ADMIN mới được vào)
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
