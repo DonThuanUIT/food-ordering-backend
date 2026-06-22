@@ -38,3 +38,6 @@ $RECYCLE.BIN/
 
 ### password ###
 application-local.yml
+
+# Firebase config
+firebase-service-account.json
