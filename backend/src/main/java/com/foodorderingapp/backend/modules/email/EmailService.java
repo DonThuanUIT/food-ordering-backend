@@ -48,6 +48,31 @@ public class EmailService {
     }
 
     @Async
+    public void sendCloseShopOtpEmail(String toEmail, String shopName, String otpCode) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Mã OTP xác thực đóng cửa hàng vĩnh viễn - " + shopName);
+
+            Context context = new Context();
+            context.setVariable("shopName", shopName);
+            context.setVariable("otpCode", otpCode);
+
+            String htmlContent = templateEngine.process("close-shop-otp-email", context);
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+            log.info("Successfully sent close shop OTP email to: {}", toEmail);
+
+        } catch (MessagingException e) {
+            log.error("Error sending close shop OTP email to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    @Async
     public void sendShopStatusHtmlEmail(String toEmail, String shopName, boolean isApproved) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

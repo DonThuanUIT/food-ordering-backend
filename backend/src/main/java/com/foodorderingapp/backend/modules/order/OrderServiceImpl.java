@@ -22,6 +22,7 @@ import com.foodorderingapp.backend.entity.Food;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -42,6 +43,7 @@ public class OrderServiceImpl implements OrderService {
     private final BuildingRepository buildingRepository;
     private final DropOffPointRepository dropOffPointRepository;
     private final VoucherRepository voucherRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     private OrderResponse mapToOrderResponse(Order order) {
         List<OrderDetailResponse> details = order.getOrderDetails().stream()
@@ -167,11 +169,24 @@ public class OrderServiceImpl implements OrderService {
             ).collect(Collectors.toList());
             order.setOrderDetails(details);
             savedOrders.add(orderRepository.save(order));
-
         }
+
         cartItemRepository.deleteAll(cartItems);
 
-        return savedOrders.stream().map(this::mapToOrderResponse).collect(Collectors.toList());
+        List<OrderResponse> responses = savedOrders.stream().map(this::mapToOrderResponse).collect(Collectors.toList());
+        for (OrderResponse res : responses) {
+            try {
+                java.util.Optional<Order> orderOpt = savedOrders.stream().filter(o -> o.getId().equals(res.getId())).findFirst();
+                if (orderOpt.isPresent()) {
+                    String destination = "/topic/shop/" + orderOpt.get().getShop().getId() + "/orders";
+                    messagingTemplate.convertAndSend(destination, res);
+                }
+            } catch (Exception e) {
+                // Ignore to avoid blocking checkout if WebSocket fails
+            }
+        }
+
+        return responses;
     }
     @Override
     public List<OrderResponse> getActiveOrders(String phone) {
@@ -260,7 +275,21 @@ public class OrderServiceImpl implements OrderService {
             order.setCancelReason(request.getCancelReason());
         }
         order.setStatus(newStatus);
-        return mapToOrderResponse(orderRepository.save(order));
+        OrderResponse response = mapToOrderResponse(orderRepository.save(order));
+
+        try {
+            // 1. Notify vendor (for dashboard/orders list update)
+            String shopDestination = "/topic/shop/" + order.getShop().getId() + "/orders";
+            messagingTemplate.convertAndSend(shopDestination, response);
+
+            // 2. Notify customer (for order details/status update)
+            String customerDestination = "/topic/orders/customer/" + order.getUser().getPhone();
+            messagingTemplate.convertAndSend(customerDestination, response);
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        return response;
     }
     @Override
     public VendorDashboardDto getVendorDashboard(UUID shopId, LocalDateTime startDate, LocalDateTime endDate) {
@@ -270,6 +299,27 @@ public class OrderServiceImpl implements OrderService {
 
         // 2. Lấy dữ liệu tổng quan thô từ câu Query Số 1 (Bảng tổng hợp doanh thu, tổng số đơn)
         VendorDashboardResponse overview = orderRepository.getVendorDashboardStats(shopId, startDate, endDate);
+
+        // Tính chu kỳ trước có cùng số ngày
+        java.time.Duration duration = java.time.Duration.between(startDate, endDate);
+        LocalDateTime previousStartDate = startDate.minus(duration);
+        LocalDateTime previousEndDate = startDate;
+        VendorDashboardResponse previousOverview = orderRepository.getVendorDashboardStats(shopId, previousStartDate, previousEndDate);
+
+        BigDecimal currentRevenue = overview != null && overview.getTotalRevenue() != null ? overview.getTotalRevenue() : java.math.BigDecimal.ZERO;
+        Long currentOrders = overview != null && overview.getTotalOrders() != null ? overview.getTotalOrders() : 0L;
+        Double currentCompletionRate = overview != null && overview.getCompletionRate() != null ? overview.getCompletionRate() : 0.0;
+        BigDecimal currentAov = overview != null && overview.getAverageOrderValue() != null ? overview.getAverageOrderValue() : java.math.BigDecimal.ZERO;
+
+        BigDecimal prevRevenue = previousOverview != null && previousOverview.getTotalRevenue() != null ? previousOverview.getTotalRevenue() : java.math.BigDecimal.ZERO;
+        Long prevOrders = previousOverview != null && previousOverview.getTotalOrders() != null ? previousOverview.getTotalOrders() : 0L;
+        Double prevCompletionRate = previousOverview != null && previousOverview.getCompletionRate() != null ? previousOverview.getCompletionRate() : 0.0;
+        BigDecimal prevAov = previousOverview != null && previousOverview.getAverageOrderValue() != null ? previousOverview.getAverageOrderValue() : java.math.BigDecimal.ZERO;
+
+        Double revenueGrowth = calculateGrowthRate(currentRevenue, prevRevenue);
+        Double orderCountGrowth = calculateGrowthRate(currentOrders, prevOrders);
+        Double completionRateGrowth = calculateGrowthRate(currentCompletionRate, prevCompletionRate);
+        Double averageOrderValueGrowth = calculateGrowthRate(currentAov, prevAov);
 
         // 3. Xử lý yêu cầu 2: Chuyển đổi dữ liệu List<Map> thành List<TrendData>
         List<TrendData> trends = orderRepository.getOrderTrends(shopId, startDate, endDate).stream()
@@ -310,14 +360,63 @@ public class OrderServiceImpl implements OrderService {
 
         // 6. Ráp nối tất cả nguyên liệu đã chế biến vào VendorDashboardDto để trả về cho Controller
         return VendorDashboardDto.builder()
-                .totalRevenue(overview != null && overview.getTotalRevenue() != null ? overview.getTotalRevenue() : java.math.BigDecimal.ZERO)
-                .totalOrders(overview != null && overview.getTotalOrders() != null ? overview.getTotalOrders() : 0L)
-                .completionRate(overview != null && overview.getCompletionRate() != null ? overview.getCompletionRate() : 0.0)
-                .averageOrderValue(overview != null && overview.getAverageOrderValue() != null ? overview.getAverageOrderValue() : java.math.BigDecimal.ZERO)
+                .totalRevenue(currentRevenue)
+                .totalOrders(currentOrders)
+                .completionRate(currentCompletionRate)
+                .averageOrderValue(currentAov)
+                .revenueGrowth(revenueGrowth)
+                .orderCountGrowth(orderCountGrowth)
+                .completionRateGrowth(completionRateGrowth)
+                .averageOrderValueGrowth(averageOrderValueGrowth)
                 .orderTrends(trends)
                 .topSellingProducts(topProducts)
                 .orderStatusBreakdown(statusBreakdown)
                 .build();
+    }
+
+    private Double calculateGrowthRate(BigDecimal current, BigDecimal previous) {
+        if (previous == null || previous.compareTo(BigDecimal.ZERO) == 0) {
+            if (current == null || current.compareTo(BigDecimal.ZERO) == 0) {
+                return 0.0;
+            }
+            return 100.0;
+        }
+        if (current == null) {
+            current = BigDecimal.ZERO;
+        }
+        return current.subtract(previous)
+                .divide(previous, 4, java.math.RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(2, java.math.RoundingMode.HALF_UP)
+                .doubleValue();
+    }
+
+    private Double calculateGrowthRate(Long current, Long previous) {
+        if (previous == null || previous == 0) {
+            if (current == null || current == 0) {
+                return 0.0;
+            }
+            return 100.0;
+        }
+        if (current == null) {
+            current = 0L;
+        }
+        double growth = ((double) (current - previous) / previous) * 100.0;
+        return BigDecimal.valueOf(growth).setScale(2, java.math.RoundingMode.HALF_UP).doubleValue();
+    }
+
+    private Double calculateGrowthRate(Double current, Double previous) {
+        if (previous == null || previous == 0.0) {
+            if (current == null || current == 0.0) {
+                return 0.0;
+            }
+            return 100.0;
+        }
+        if (current == null) {
+            current = 0.0;
+        }
+        double growth = ((current - previous) / previous) * 100.0;
+        return BigDecimal.valueOf(growth).setScale(2, java.math.RoundingMode.HALF_UP).doubleValue();
     }
 
 

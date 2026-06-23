@@ -18,10 +18,13 @@ public interface FoodRepository extends JpaRepository<Food, UUID> {
     boolean existsByCategoryId(UUID categoryId);
     Optional<Food> findByIdAndShopId(UUID id, UUID shopId);
 
-    @Query("SELECT f FROM Food f JOIN FETCH f.category WHERE f.shop.id = :shopId " +
+    @Query(value = "SELECT f FROM Food f JOIN FETCH f.category WHERE f.shop.id = :shopId " +
+            "AND (:categoryId IS NULL OR f.category.id = :categoryId)",
+            countQuery = "SELECT COUNT(f) FROM Food f WHERE f.shop.id = :shopId " +
             "AND (:categoryId IS NULL OR f.category.id = :categoryId)")
-    List<Food> findByShopIdAndOptionalCategory(@Param("shopId") UUID shopId,
-                                               @Param("categoryId") UUID categoryId);
+    org.springframework.data.domain.Page<Food> findByShopIdAndOptionalCategory(@Param("shopId") UUID shopId,
+                                                                               @Param("categoryId") UUID categoryId,
+                                                                               org.springframework.data.domain.Pageable pageable);
 
     @Query("SELECT f FROM Food f JOIN FETCH f.category WHERE f.shop.id = :shopId")
     List<Food> findAllByShopIdWithCategory(@Param("shopId") UUID shopId);

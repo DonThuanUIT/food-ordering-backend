@@ -31,13 +31,14 @@ public class FoodController {
         return ResponseEntity.ok(foodService.getExploreFoods(pageable));
     }
     @GetMapping("/vendor/shops/{shopId}/foods")
-    public ResponseEntity<List<FoodResponse>> getAllFoods(
+    public ResponseEntity<Page<FoodResponse>> getAllFoods(
             @PathVariable UUID shopId,
             @RequestParam(required = false) UUID categoryId,
+            @org.springframework.data.web.PageableDefault(size = 10) Pageable pageable,
             Principal principal
     ) {
         String vendorPhone = principal.getName();
-        return ResponseEntity.ok(foodService.getAllFoods(shopId, categoryId, vendorPhone));
+        return ResponseEntity.ok(foodService.getAllFoods(shopId, categoryId, vendorPhone, pageable));
     }
 
     @PostMapping("/vendor/shops/{shopId}/foods")

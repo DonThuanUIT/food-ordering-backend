@@ -1,6 +1,7 @@
 package com.foodorderingapp.backend.modules.shop.service;
 
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopCreateRequest;
+import com.foodorderingapp.backend.modules.shop.dto.request.ShopCloseRequest;
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopStatusRequest;
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopUpdateRequest;
 import com.foodorderingapp.backend.modules.shop.dto.response.ShopDetailResponse;
@@ -24,4 +25,6 @@ public interface ShopService {
     Page<ShopResponse> getShopsForAdmin(ShopStatus status, Pageable pageable);
     ShopResponse updateShopStatus(UUID shopId, ShopStatusRequest request);
     ShopResponse getShopDetailForAdmin(UUID shopId);
+    void requestCloseShopOtp(UUID shopId, String vendorPhone);
+    void confirmCloseShop(UUID shopId, ShopCloseRequest request, String vendorPhone);
 }
