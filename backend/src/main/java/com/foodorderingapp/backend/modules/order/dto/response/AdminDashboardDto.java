@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,4 +21,5 @@ public class AdminDashboardDto {
     private Long bannedShops;
     private BigDecimal totalSystemRevenue;
     private Long totalSystemOrders;
+    private List<DailyOrderDto> dailyOrders;
 }

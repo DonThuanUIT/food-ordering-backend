@@ -2,6 +2,7 @@ package com.foodorderingapp.backend.modules.order.repository;
 
 import com.foodorderingapp.backend.entity.Order;
 import com.foodorderingapp.backend.core.enums.OrderStatus;
+import com.foodorderingapp.backend.modules.order.dto.response.DailyOrderDto;
 import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -99,4 +100,13 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "  COUNT(*) AS totalOrders " +
             "FROM orders", nativeQuery = true)
     Map<String, Object> getSystemOverviewStats();
+
+    @Query(value = "SELECT CAST(created_at AS DATE) as date, COUNT(*) as orderCount " +
+            "FROM orders " +
+            "WHERE created_at >= :startDate " +
+            "GROUP BY CAST(created_at AS DATE) " +
+            "ORDER BY date ASC", nativeQuery = true)
+    List<Map<String, Object>> getDailyOrderStats(
+            @Param("startDate") LocalDateTime startDate
+    );
 }
