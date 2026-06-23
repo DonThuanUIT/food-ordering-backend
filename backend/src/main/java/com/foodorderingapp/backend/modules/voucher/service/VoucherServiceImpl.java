@@ -174,16 +174,29 @@ public class VoucherServiceImpl implements VoucherService {
         if (voucher.getFoods() != null) {
             foodIds = voucher.getFoods().stream().map(Food::getId).collect(Collectors.toList());
         }
+
+        String displayDiscountType = "";
+        if (voucher.getDiscountType() != null) {
+            displayDiscountType = "PERCENTAGE".equalsIgnoreCase(voucher.getDiscountType()) ? "Theo phần trăm" : "Số tiền cố định";
+        }
+
+        String displayApplyType = "";
+        if (voucher.getApplyType() != null) {
+            displayApplyType = "ALL_MENU".equalsIgnoreCase(voucher.getApplyType()) ? "Toàn bộ thực đơn" : "Món ăn cụ thể";
+        }
+
         return VoucherResponse.builder()
                 .id(voucher.getId())
                 .shopId(voucher.getShop().getId())
                 .code(voucher.getCode())
                 .title(voucher.getTitle())
                 .discountType(voucher.getDiscountType())
+                .displayDiscountType(displayDiscountType)
                 .discountValue(voucher.getDiscountValue())
                 .minOrderValue(voucher.getMinOrderValue())
                 .maxDiscountValue(voucher.getMaxDiscountValue())
                 .applyType(voucher.getApplyType())
+                .displayApplyType(displayApplyType)
                 .startDate(voucher.getStartDate())
                 .endDate(voucher.getEndDate())
                 .isActive(voucher.getIsActive())

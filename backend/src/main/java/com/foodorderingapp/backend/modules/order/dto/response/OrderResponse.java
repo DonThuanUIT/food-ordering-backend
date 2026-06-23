@@ -17,6 +17,7 @@ public class OrderResponse {
     private String customerPhone;
     private BigDecimal totalPrice;
     private String status;
+    private String displayStatus;
     private String building;
     private String dropOff;
     private String cancelReason;

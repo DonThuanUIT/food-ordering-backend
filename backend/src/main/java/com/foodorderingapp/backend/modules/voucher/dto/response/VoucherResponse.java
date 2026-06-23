@@ -20,10 +20,12 @@ public class VoucherResponse {
     private String code;
     private String title;
     private String discountType;
+    private String displayDiscountType;
     private BigDecimal discountValue;
     private BigDecimal minOrderValue;
     private BigDecimal maxDiscountValue;
     private String applyType;
+    private String displayApplyType;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private Boolean isActive;

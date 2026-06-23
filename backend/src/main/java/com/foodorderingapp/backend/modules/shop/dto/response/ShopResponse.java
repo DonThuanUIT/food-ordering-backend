@@ -23,6 +23,7 @@ public class ShopResponse {
     @JsonFormat(pattern = "HH:mm")
     private LocalTime closeTime;
     private String status;
+    private String displayStatusText;
     private boolean isActive;
     private String displayStatus;
 
