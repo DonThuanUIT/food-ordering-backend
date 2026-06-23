@@ -1,0 +1,25 @@
+# Danh sách công việc triển khai nâng cấp backend
+
+- [x] **1. Phân trang món ăn (Food Pagination)**
+  - [x] Sửa `FoodRepository.java` thêm phương thức `findByShopIdAndOptionalCategory` phân trang.
+  - [x] Sửa `FoodService.java` thay đổi chữ ký hàm `getAllFoods`.
+  - [x] Sửa `FoodServiceImpl.java` cài đặt logic phân trang và mapping.
+  - [x] Sửa `FoodController.java` để tiếp nhận `Pageable` và trả về `Page<FoodResponse>`.
+- [x] **2. Real-time đơn hàng (Real-time Order Updates via WebSocket)**
+  - [x] Bổ sung `SimpMessagingTemplate` vào `OrderServiceImpl.java`.
+  - [x] Gửi thông báo WebSocket khi đơn hàng được tạo thành công trong `createOrder`.
+  - [x] Gửi thông báo WebSocket cho chủ quán và khách hàng khi cập nhật trạng thái đơn trong `updateOrderStatus`.
+- [x] **3. Đóng cửa hàng vĩnh viễn (Permanently Close Shop)**
+  - [x] Bổ sung trạng thái `CLOSED` vào enum `ShopStatus.java`.
+  - [x] Tạo DTO `ShopCloseRequest.java` cho payload xác thực đóng quán.
+  - [x] Tạo template email Thymeleaf `close-shop-otp-email.html`.
+  - [x] Thêm phương thức gửi mail OTP đóng quán trong `EmailService.java`.
+  - [x] Thêm phương thức đóng cửa hàng vào `ShopService.java` và triển khai trong `ShopServiceImpl.java`.
+  - [x] Cập nhật chặn chỉnh sửa quán đã `CLOSED` trong các phương thức của `ShopServiceImpl.java`.
+  - [x] Khai báo các REST endpoint đóng cửa hàng trong `VendorShopController.java`.
+- [x] **4. Tính toán Chỉ số Tăng trưởng (%) (Growth Metric Calculation)**
+  - [x] Bổ sung 4 trường dữ liệu growth vào `VendorDashboardDto.java`.
+  - [x] Nâng cấp logic tính toán chu kỳ trước và phần trăm tăng trưởng trong `OrderServiceImpl.java`'s `getVendorDashboard`.
+- [x] **5. Kiểm tra và xác minh (Verification)**
+  - [x] Biên dịch dự án và chạy bộ test tự động sử dụng `mvn clean test`.
+  - [x] Hoàn thành tài liệu walkthrough tổng kết kết quả.
