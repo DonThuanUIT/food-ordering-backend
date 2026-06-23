@@ -64,6 +64,7 @@ public class SecurityConfig {
 
 
 
+
                         // 3. Không gian của Vendor (Bắt buộc là VENDOR)
                         .requestMatchers("/vendor/**").hasAuthority("ROLE_VENDOR")
 

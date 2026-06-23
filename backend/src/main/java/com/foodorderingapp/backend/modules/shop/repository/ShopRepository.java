@@ -27,5 +27,6 @@ public interface ShopRepository extends JpaRepository<Shop, UUID> {
     Page<Shop> searchShops(@Param("keyword") String keyword,@Param("status") ShopStatus status, Pageable pageable);
     Page<Shop> findAllByStatus(ShopStatus status, Pageable pageable);
     Optional<Shop> findByIdAndOwner_Phone(UUID id, String phone);
-    long countByStatus(ShopStatus status);
+    @Query("SELECT COUNT(s) FROM Shop s WHERE s.status = :status")
+    long countByStatus(@Param("status") ShopStatus status);
 }
