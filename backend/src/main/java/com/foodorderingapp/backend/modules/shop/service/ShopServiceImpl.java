@@ -120,7 +120,8 @@ public class ShopServiceImpl implements ShopService {
                 .closeTime(shop.getCloseTime())
                 .status(shop.getStatus().name())
                 .isActive(shop.getIsActive())
-                .isOpen(shop.getIsOpen());
+                .isOpen(shop.getIsOpen())
+                .displayStatus(calculateDisplayStatus(shop));
 
         ShopSettings settings = shop.getSettings();
         if (settings != null) {
@@ -160,17 +161,40 @@ public class ShopServiceImpl implements ShopService {
                 .toList());
         content.sort((s1, s2) -> {
             if (s1.getDisplayStatus().equals(s2.getDisplayStatus())) return 0;
-            return s1.getDisplayStatus().equals("OPENING") ? -1 : 1;
+            return s1.getDisplayStatus().equals("ĐANG HOẠT ĐỘNG") ? -1 : 1;
         });
         return new PageImpl<>(content, pageable, shopPage.getTotalElements());
 
     }
 
     private ShopResponse mapToStudentResponse(Shop shop) {
-        LocalTime now = LocalTime.now();
-        String displayStatus = "CLOSED";
         String coverUrl = null;
         String logoUrl = null;
+        
+        ShopSettings settings = shop.getSettings();
+        if (settings != null) {
+            coverUrl = settings.getCoverUrl();
+            logoUrl = settings.getLogoUrl();
+        }
+        
+        return ShopResponse.builder()
+                .id(shop.getId())
+                .name(shop.getName())
+                .description(shop.getDescription())
+                .openTime(shop.getOpenTime())
+                .closeTime(shop.getCloseTime())
+                .status(shop.getStatus().name())
+                .isActive(shop.getIsActive())
+                .displayStatus(calculateDisplayStatus(shop))
+                .coverUrl(coverUrl)
+                .logoUrl(logoUrl)
+                .isOpen(shop.getIsOpen())
+                .build();
+    }
+
+    private String calculateDisplayStatus(Shop shop) {
+        LocalTime now = LocalTime.now();
+        String displayStatus = "ĐÓNG CỬA";
         
         ShopSettings settings = shop.getSettings();
         if (Boolean.TRUE.equals(shop.getIsOpen())) {
@@ -194,34 +218,16 @@ public class ShopServiceImpl implements ShopService {
             if (open != null && close != null) {
                 if (close.isAfter(open)) {
                     if (now.isAfter(open) && now.isBefore(close)) {
-                        displayStatus = "OPENING";
+                        displayStatus = "ĐANG HOẠT ĐỘNG";
                     }
                 } else {
                     if (now.isAfter(open) || now.isBefore(close)) {
-                        displayStatus = "OPENING";
+                        displayStatus = "ĐANG HOẠT ĐỘNG";
                     }
                 }
             }
         }
-        
-        if (settings != null) {
-            coverUrl = settings.getCoverUrl();
-            logoUrl = settings.getLogoUrl();
-        }
-        
-        return ShopResponse.builder()
-                .id(shop.getId())
-                .name(shop.getName())
-                .description(shop.getDescription())
-                .openTime(shop.getOpenTime())
-                .closeTime(shop.getCloseTime())
-                .status(shop.getStatus().name())
-                .isActive(shop.getIsActive())
-                .displayStatus(displayStatus)
-                .coverUrl(coverUrl)
-                .logoUrl(logoUrl)
-                .isOpen(shop.getIsOpen())
-                .build();
+        return displayStatus;
     }
 
     @Override
