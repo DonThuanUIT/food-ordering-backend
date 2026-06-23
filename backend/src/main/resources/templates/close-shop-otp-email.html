@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ffcccc; border-radius: 10px; background-color: #fff8f8;">
+    <h2 style="color: #d9534f; text-align: center;">Yêu cầu đóng cửa hàng vĩnh viễn</h2>
+    <p>Chào chủ quán <b><span th:text="${shopName}">Tên cửa hàng</span></b>,</p>
+    <p>Hệ thống Đặt đồ ăn KTX đã nhận được yêu cầu đóng cửa hàng vĩnh viễn của bạn. Đây là hành động không thể hoàn tác. Để tiếp tục, vui lòng sử dụng mã xác thực (OTP) dưới đây:</p>
+    <div style="text-align: center; margin: 20px 0;">
+        <span style="font-size: 32px; font-weight: bold; color: #d9534f; letter-spacing: 5px; padding: 10px 20px; border: 2px dashed #d9534f; border-radius: 5px;"
+              th:text="${otpCode}">123456</span>
+    </div>
+    <p style="color: #555; font-size: 14px;"><i>Lưu ý: Mã này chỉ có hiệu lực trong vòng 5 phút. Vui lòng KHÔNG chia sẻ mã này cho bất kỳ ai. Nếu bạn không yêu cầu đóng cửa hàng, vui lòng bỏ qua email này hoặc liên hệ ngay với quản trị viên hệ thống.</i></p>
+    <hr style="border-top: 1px solid #ffdddd;" />
+    <p style="text-align: center; font-size: 12px; color: #999;">Đây là email tự động, vui lòng không trả lời lại.</p>
+</div>
+</body>
+</html>

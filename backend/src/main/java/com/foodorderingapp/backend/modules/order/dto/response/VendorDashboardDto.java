@@ -17,6 +17,10 @@ public class VendorDashboardDto {
     private Long totalOrders;
     private Double completionRate;
     private BigDecimal averageOrderValue;
+    private Double revenueGrowth;
+    private Double orderCountGrowth;
+    private Double completionRateGrowth;
+    private Double averageOrderValueGrowth;
     private List<TrendData> orderTrends;
     private List<TopProductData> topSellingProducts;
     private Map<String, Long> orderStatusBreakdown;

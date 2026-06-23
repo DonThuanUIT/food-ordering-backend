@@ -2,6 +2,7 @@ package com.foodorderingapp.backend.modules.shop.service;
 
 import com.foodorderingapp.backend.core.component.ShopValidationComponent;
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopCreateRequest;
+import com.foodorderingapp.backend.modules.shop.dto.request.ShopCloseRequest;
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopStatusRequest;
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopUpdateRequest;
 import com.foodorderingapp.backend.modules.food.dto.response.CategoryMenuResponse;
@@ -19,6 +20,7 @@ import com.foodorderingapp.backend.modules.food.repository.FoodRepository;
 import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
 import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
 import com.foodorderingapp.backend.modules.email.EmailService;
+import com.foodorderingapp.backend.modules.email.OtpService;
 import com.foodorderingapp.backend.modules.shop.service.ShopService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +49,8 @@ public class ShopServiceImpl implements ShopService {
     private final FoodRepository foodRepository;
     private final ShopValidationComponent shopValidationComponent;
     private final EmailService emailService;
+    private final OtpService otpService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -265,6 +270,9 @@ public class ShopServiceImpl implements ShopService {
     @Transactional
     public ShopResponse updateShopProfile(UUID shopId, ShopUpdateRequest request, String vendorPhone) {
         Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
+        if (shop.getStatus() == ShopStatus.CLOSED) {
+            throw new AppException("Cửa hàng này đã bị đóng vĩnh viễn và không thể chỉnh sửa thông tin!", HttpStatus.BAD_REQUEST);
+        }
 
         ShopSettings settings = shop.getSettings();
         if (settings == null) {
@@ -368,6 +376,9 @@ public class ShopServiceImpl implements ShopService {
     @Transactional
     public ShopResponse toggleShopStatus(UUID shopId, Map<String, Boolean> statusMap, String vendorPhone) {
         Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
+        if (shop.getStatus() == ShopStatus.CLOSED) {
+            throw new AppException("Cửa hàng này đã bị đóng vĩnh viễn và không thể bật/tắt trạng thái!", HttpStatus.BAD_REQUEST);
+        }
         if (statusMap.containsKey("isActive")) {
             shop.setIsActive(statusMap.get("isActive"));
         }
@@ -427,5 +438,61 @@ public class ShopServiceImpl implements ShopService {
                 .orElseThrow(() -> new AppException("Không tìm thấy quán ăn với ID: " + shopId, HttpStatus.NOT_FOUND));
 
         return this.mapToResponse(shop);
+    }
+
+    @Override
+    @Transactional
+    public void requestCloseShopOtp(UUID shopId, String vendorPhone) {
+        Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
+        if (shop.getStatus() == ShopStatus.CLOSED) {
+            throw new AppException("Cửa hàng này đã được đóng vĩnh viễn!", HttpStatus.BAD_REQUEST);
+        }
+        User owner = shop.getOwner();
+
+        // Generate OTP and save to Redis
+        String otpCode = otpService.generateAndSaveOtp(owner.getEmail());
+
+        // Send email with OTP
+        emailService.sendCloseShopOtpEmail(owner.getEmail(), shop.getName(), otpCode);
+    }
+
+    @Override
+    @Transactional
+    public void confirmCloseShop(UUID shopId, ShopCloseRequest request, String vendorPhone) {
+        Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
+        if (shop.getStatus() == ShopStatus.CLOSED) {
+            throw new AppException("Cửa hàng này đã được đóng vĩnh viễn từ trước!", HttpStatus.BAD_REQUEST);
+        }
+        User owner = shop.getOwner();
+
+        if ("PASSWORD".equalsIgnoreCase(request.getVerificationType())) {
+            if (request.getPassword() == null || request.getPassword().isBlank()) {
+                throw new AppException("Mật khẩu xác thực không được để trống!", HttpStatus.BAD_REQUEST);
+            }
+            if (!passwordEncoder.matches(request.getPassword(), owner.getPassword())) {
+                throw new AppException("Mật khẩu xác thực không chính xác!", HttpStatus.UNAUTHORIZED);
+            }
+        } else if ("OTP".equalsIgnoreCase(request.getVerificationType())) {
+            if (request.getOtpCode() == null || request.getOtpCode().isBlank()) {
+                throw new AppException("Mã OTP không được để trống!", HttpStatus.BAD_REQUEST);
+            }
+            boolean isValid = otpService.validateOtp(owner.getEmail(), request.getOtpCode());
+            if (!isValid) {
+                throw new AppException("Mã OTP không hợp lệ hoặc đã hết hạn!", HttpStatus.BAD_REQUEST);
+            }
+        } else {
+            throw new AppException("Phương thức xác thực không hợp lệ!", HttpStatus.BAD_REQUEST);
+        }
+
+        // Close shop permanently
+        shop.setStatus(ShopStatus.CLOSED);
+        shop.setIsActive(false);
+        shop.setIsOpen(false);
+        if (shop.getSettings() != null) {
+            shop.getSettings().setIsOpen(false);
+        }
+
+        shopRepository.save(shop);
+        log.info("Cửa hàng {} ({}) đã đóng vĩnh viễn thành công bởi vendor {}", shop.getName(), shop.getId(), vendorPhone);
     }
 }

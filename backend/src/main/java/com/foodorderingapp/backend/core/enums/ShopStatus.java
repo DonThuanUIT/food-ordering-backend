@@ -4,5 +4,6 @@ public enum ShopStatus {
     PENDING,
     APPROVED,
     REJECTED,
-    BANNED
+    BANNED,
+    CLOSED
 }

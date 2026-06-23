@@ -63,17 +63,15 @@ public class FoodServiceImpl implements FoodService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<FoodResponse> getAllFoods(UUID shopId,UUID categoryId, String vendorPhone) {
+    public Page<FoodResponse> getAllFoods(UUID shopId, UUID categoryId, String vendorPhone, Pageable pageable) {
         validateShopOwnership(shopId, vendorPhone);
 
         if (categoryId != null) {
             validateCategoryBelongsToShop(categoryId, shopId);
         }
 
-        return foodRepository.findByShopIdAndOptionalCategory(shopId, categoryId)
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return foodRepository.findByShopIdAndOptionalCategory(shopId, categoryId, pageable)
+                .map(this::mapToResponse);
     }
     public Page<FoodExploreResponse> getExploreFoods(Pageable pageable){
         return foodRepository.exploreFoods(java.time.LocalTime.now(), pageable);

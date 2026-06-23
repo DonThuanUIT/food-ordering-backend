@@ -2,6 +2,7 @@ package com.foodorderingapp.backend.modules.shop.controller;
 
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopCreateRequest;
 import com.foodorderingapp.backend.modules.shop.dto.request.ShopUpdateRequest;
+import com.foodorderingapp.backend.modules.shop.dto.request.ShopCloseRequest;
 import com.foodorderingapp.backend.modules.order.dto.request.UpdateStatusRequest;
 import com.foodorderingapp.backend.modules.order.dto.response.OrderResponse;
 import com.foodorderingapp.backend.modules.shop.dto.response.ShopResponse;
@@ -90,5 +91,26 @@ public class VendorShopController {
             @RequestBody UpdateStatusRequest request,
             Principal principal) {
         return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request));
+    }
+
+    @PostMapping("/{shopId}/close/otp-request")
+    public ResponseEntity<Void> requestCloseShopOtp(
+            @PathVariable UUID shopId,
+            Principal principal
+    ) {
+        String vendorPhone = principal.getName();
+        shopService.requestCloseShopOtp(shopId, vendorPhone);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{shopId}/close")
+    public ResponseEntity<Void> confirmCloseShop(
+            @PathVariable UUID shopId,
+            @Valid @RequestBody ShopCloseRequest request,
+            Principal principal
+    ) {
+        String vendorPhone = principal.getName();
+        shopService.confirmCloseShop(shopId, request, vendorPhone);
+        return ResponseEntity.ok().build();
     }
 }
