@@ -1,0 +1,208 @@
+package com.foodorderingapp.backend.modules.food.service;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.foodorderingapp.backend.entity.Food;
+import com.foodorderingapp.backend.modules.food.dto.gemini.*;
+import com.foodorderingapp.backend.modules.food.repository.FoodRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.*;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class GeminiService {
+
+    private final FoodRepository foodRepository;
+    private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${gemini.api-key}")
+    private String apiKey;
+
+    @Value("${gemini.url}")
+    private String geminiUrl;
+
+    @Async
+    @Transactional
+    public void analyzeFoodAsync(UUID foodId) {
+        log.info("Starting asynchronous food analysis for foodId: {}", foodId);
+        Optional<Food> foodOpt = foodRepository.findById(foodId);
+        if (foodOpt.isEmpty()) {
+            log.warn("Food not found for analysis with ID: {}", foodId);
+            return;
+        }
+        Food food = foodOpt.get();
+        try {
+            // Build prompt
+            String prompt = String.format(
+                "Hãy phân tích món ăn có tên là \"%s\" (Mô tả hiện tại: \"%s\", URL ảnh: \"%s\"). " +
+                "Hãy trích xuất: " +
+                "1. Danh sách từ 3 đến 8 thẻ (tags) tiếng Việt viết thường, không dấu cách, ngăn cách bằng dấu gạch ngang nếu là từ ghép (ví dụ: \"cay\", \"mon-nuoc\", \"bun\", \"an-sang\"). " +
+                "2. Vùng miền ẩm thực phù hợp nhất (ví dụ: \"Miền Trung\", \"Miền Bắc\", \"Miền Nam\", \"Tây Âu\", \"Hàn Quốc\", \"Nhật Bản\", \"Đồ ăn nhanh\"). " +
+                "3. Cấp độ cay (từ 0 đến 3, trong đó 0 là không cay, 1 là cay nhẹ, 2 là cay vừa, 3 là rất cay). " +
+                "4. Gợi ý mô tả ngắn gọn, hấp dẫn bằng tiếng Việt (khoảng 15-30 từ). " +
+                "Định dạng kết quả trả về bắt buộc phải là một đối tượng JSON hợp lệ có dạng: " +
+                "{\"tags\":[\"tag1\",\"tag2\"],\"cuisine\":\"Tên Vùng Miền\",\"spicyLevel\":1,\"suggestedDescription\":\"Mô tả ngắn...\"}",
+                food.getName(),
+                food.getDescription() != null ? food.getDescription() : "",
+                food.getImageUrl() != null ? food.getImageUrl() : ""
+            );
+
+            String responseText = callGeminiApi(prompt, true);
+            if (responseText == null || responseText.isBlank()) {
+                log.warn("Gemini returned empty response for food: {}", food.getName());
+                useFallback(food);
+                return;
+            }
+
+            GeminiFoodAnalysis analysis = objectMapper.readValue(responseText, GeminiFoodAnalysis.class);
+            if (analysis != null) {
+                if (analysis.getTags() != null && (food.getTags() == null || food.getTags().isEmpty())) {
+                    food.setTags(analysis.getTags());
+                }
+                if (analysis.getCuisine() != null && (food.getCuisine() == null || food.getCuisine().isBlank())) {
+                    food.setCuisine(analysis.getCuisine());
+                }
+                if (analysis.getSpicyLevel() != null && food.getSpicyLevel() == 0) {
+                    food.setSpicyLevel(analysis.getSpicyLevel());
+                }
+                // Only overwrite description if currently empty or blank
+                if ((food.getDescription() == null || food.getDescription().isBlank()) 
+                        && analysis.getSuggestedDescription() != null) {
+                    food.setDescription(analysis.getSuggestedDescription());
+                }
+                foodRepository.save(food);
+                log.info("Successfully analyzed and updated food {} with tags: {}, cuisine: {}, spicyLevel: {}", 
+                    food.getName(), food.getTags(), food.getCuisine(), food.getSpicyLevel());
+            } else {
+                useFallback(food);
+            }
+        } catch (Exception e) {
+            log.error("Error analyzing food with Gemini for foodId: " + foodId, e);
+            useFallback(food);
+        }
+    }
+
+    private void useFallback(Food food) {
+        log.info("Using fallback for food: {}", food.getName());
+        try {
+            List<String> tags = new ArrayList<>();
+            String nameLower = food.getName().toLowerCase();
+            if (nameLower.contains("bún") || nameLower.contains("phở") || nameLower.contains("mỳ") || nameLower.contains("mì")) {
+                tags.add("mon-nuoc");
+            } else {
+                tags.add("mon-kho");
+            }
+            if (nameLower.contains("cay") || nameLower.contains("lẩu") || nameLower.contains("ớt")) {
+                tags.add("cay");
+                food.setSpicyLevel(1);
+            } else {
+                food.setSpicyLevel(0);
+            }
+            if (nameLower.contains("huế") || nameLower.contains("quảng")) {
+                food.setCuisine("Miền Trung");
+            } else if (nameLower.contains("hà nội") || nameLower.contains("bắc")) {
+                food.setCuisine("Miền Bắc");
+            } else if (nameLower.contains("sài gòn") || nameLower.contains("nam")) {
+                food.setCuisine("Miền Nam");
+            } else {
+                food.setCuisine("Việt Nam");
+            }
+            tags.add("viet-nam");
+            
+            if (food.getTags() == null || food.getTags().isEmpty()) {
+                food.setTags(tags);
+            }
+            foodRepository.save(food);
+            log.info("Applied fallback tags to food {}: {}", food.getName(), food.getTags());
+        } catch (Exception e) {
+            log.error("Failed to apply fallback to food: " + food.getName(), e);
+        }
+    }
+
+    public List<GeminiRecommendationMatch> recommendFoods(String userQuery, List<Food> availableFoods) {
+        if (availableFoods == null || availableFoods.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Build list of foods to send to Gemini (only send metadata to save token limits)
+        List<Map<String, Object>> menuList = new ArrayList<>();
+        for (Food f : availableFoods) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("foodId", f.getId().toString());
+            map.put("name", f.getName());
+            map.put("description", f.getDescription() != null ? f.getDescription() : "");
+            map.put("tags", f.getTags() != null ? f.getTags() : Collections.emptyList());
+            map.put("cuisine", f.getCuisine() != null ? f.getCuisine() : "");
+            map.put("spicyLevel", f.getSpicyLevel() != null ? f.getSpicyLevel() : 0);
+            menuList.add(map);
+        }
+
+        try {
+            String menuJsonStr = objectMapper.writeValueAsString(menuList);
+            String prompt = String.format(
+                "Bạn là một trợ lý ảo tư vấn ẩm thực thân thiện tại Việt Nam.\n" +
+                "Khách hàng yêu cầu: \"%s\".\n\n" +
+                "Dưới đây là danh sách thực đơn các món ăn đang có sẵn của quán:\n" +
+                "%s\n\n" +
+                "Hãy chọn ra tối đa 3 món phù hợp nhất với yêu cầu trên của khách hàng từ danh sách thực đơn có sẵn ở trên.\n" +
+                "Với mỗi món được chọn, hãy giải thích cực kỳ ngắn gọn bằng đúng 1 câu tiếng Việt lý do tại sao món này lại phù hợp.\n" +
+                "Định dạng kết quả trả về bắt buộc phải là một mảng JSON các đối tượng có cấu trúc chính xác như sau:\n" +
+                "[\n" +
+                "  { \"foodId\": \"UUID của món ăn\", \"reason\": \"Lý do gợi ý ngắn gọn bằng tiếng Việt...\" }\n" +
+                "]\n" +
+                "Chú ý: Nếu không có món nào phù hợp, hãy trả về một mảng trống: []",
+                userQuery,
+                menuJsonStr
+            );
+
+            String responseText = callGeminiApi(prompt, true);
+            if (responseText == null || responseText.isBlank()) {
+                return Collections.emptyList();
+            }
+
+            return objectMapper.readValue(responseText, new TypeReference<List<GeminiRecommendationMatch>>() {});
+        } catch (Exception e) {
+            log.error("Error getting recommendation matches from Gemini", e);
+            return Collections.emptyList();
+        }
+    }
+
+    private String callGeminiApi(String prompt, boolean requireJson) {
+        String url = geminiUrl + "?key=" + apiKey;
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        GeminiRequest requestPayload = GeminiRequest.fromPrompt(prompt, requireJson);
+        HttpEntity<GeminiRequest> entity = new HttpEntity<>(requestPayload, headers);
+
+        try {
+            ResponseEntity<GeminiResponse> response = restTemplate.postForEntity(url, entity, GeminiResponse.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                GeminiResponse geminiResponse = response.getBody();
+                if (geminiResponse.getCandidates() != null && !geminiResponse.getCandidates().isEmpty()) {
+                    GeminiResponse.Candidate candidate = geminiResponse.getCandidates().get(0);
+                    if (candidate.getContent() != null && candidate.getContent().getParts() != null && !candidate.getContent().getParts().isEmpty()) {
+                        return candidate.getContent().getParts().get(0).getText();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("API call to Gemini failed: " + e.getMessage());
+        }
+        return null;
+    }
+}
