@@ -30,9 +30,6 @@ public class Message {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Column(name = "is_read")
-    private Boolean isRead = false;
-
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
