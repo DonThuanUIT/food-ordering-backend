@@ -30,4 +30,8 @@ public class FoodRequest {
     private BigDecimal price;
 
     private String imageUrl;
+
+    private java.util.List<String> tags;
+    private String cuisine;
+    private Integer spicyLevel;
 }

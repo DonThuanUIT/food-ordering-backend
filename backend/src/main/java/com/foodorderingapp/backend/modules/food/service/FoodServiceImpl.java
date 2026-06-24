@@ -58,6 +58,9 @@ public class FoodServiceImpl implements FoodService {
                 .isAvailable(food.getIsAvailable())
                 .categoryId(food.getCategory().getId())
                 .categoryName(food.getCategory().getName())
+                .tags(food.getTags())
+                .cuisine(food.getCuisine())
+                .spicyLevel(food.getSpicyLevel())
                 .build();
     }
 
