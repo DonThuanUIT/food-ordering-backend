@@ -17,7 +17,8 @@ import java.util.UUID;
 
 @Service
 public interface OrderService {
-    List<OrderResponse> createOrder(String phone, CheckoutRequest request);
+    // Trong file OrderService.java
+    OrderResponse createOrder(String phone, CheckoutRequest request);
     List<OrderResponse> getActiveOrders(String phone);
     List<OrderResponse> getOrderHistory(String phone);
     Review createReview(UUID orderId, ReviewRequest request, String phone);
