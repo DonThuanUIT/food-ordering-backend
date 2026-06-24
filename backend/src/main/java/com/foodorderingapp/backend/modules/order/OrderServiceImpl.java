@@ -17,6 +17,7 @@ import com.foodorderingapp.backend.modules.building.repository.BuildingRepositor
 import com.foodorderingapp.backend.modules.building.repository.DropOffPointRepository;
 import com.foodorderingapp.backend.modules.order.OrderService;
 import com.foodorderingapp.backend.modules.voucher.repository.VoucherRepository;
+import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
 import com.foodorderingapp.backend.entity.Voucher;
 import com.foodorderingapp.backend.entity.Food;
 import jakarta.transaction.Transactional;
@@ -44,6 +45,7 @@ public class OrderServiceImpl implements OrderService {
     private final DropOffPointRepository dropOffPointRepository;
     private final VoucherRepository voucherRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ShopRepository shopRepository;
 
     private OrderResponse mapToOrderResponse(Order order) {
         List<OrderDetailResponse> details = order.getOrderDetails().stream()
@@ -71,124 +73,156 @@ public class OrderServiceImpl implements OrderService {
                 .discountAmount(order.getDiscountAmount())
                 .build();
     }
+
+    @Override
     @Transactional
-    public List<OrderResponse> createOrder(String phone, CheckoutRequest request) {
+    public OrderResponse createOrder(String phone, CheckoutRequest request) {
+        // 1. Xác thực User & Shop
         User user = userRepository.findByPhone(phone)
-                .orElseThrow(() -> new AppException("User not found", HttpStatus.NOT_FOUND));
-        List<CartItem> cartItems = cartItemRepository.findAllByUserPhone(phone);
-        if (cartItems.isEmpty()) {
-            throw new AppException("Gio hang cua ban dang trong", HttpStatus.BAD_REQUEST);
+                .orElseThrow(() -> new AppException("Không tìm thấy người dùng", HttpStatus.NOT_FOUND));
 
+        Shop shop = shopRepository.findById(request.getShopId())
+                .orElseThrow(() -> new AppException("Quán ăn không tồn tại", HttpStatus.NOT_FOUND));
+
+        if (!Boolean.TRUE.equals(shop.getIsOpen()) || !Boolean.TRUE.equals(shop.getIsActive())) {
+            throw new AppException("Quán ăn hiện đang đóng cửa hoặc ngừng hoạt động", HttpStatus.BAD_REQUEST);
         }
-        Map<Shop, List<CartItem>> itemsByShop = cartItems.stream().collect(Collectors.groupingBy(item -> item.getFood().getShop()));
-        List<Order> savedOrders = new ArrayList<>();
-        for (Map.Entry<Shop, List<CartItem>> entry : itemsByShop.entrySet()) {
-            Shop shop = entry.getKey();
-            List<CartItem> shopItems = entry.getValue();
-            BigDecimal totalForShop = shopItems.stream()
-                    .map(item -> item.getFood().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            // Resolve building name and drop-off point - prefer IDs for clean data, fallback to raw strings
-            String buildingName = request.getBuildingName();
-            if (request.getBuildingId() != null) {
-                buildingName = buildingRepository.findById(request.getBuildingId())
-                        .map(Building::getName)
-                        .orElse(buildingName);
+
+        // 2. Lấy dữ liệu Giỏ hàng & Validate Option 1A (Strict Shop Matching)
+        List<CartItem> selectedCartItems = cartItemRepository.findAllById(request.getCartItemIds());
+
+        if (selectedCartItems.isEmpty() || selectedCartItems.size() != request.getCartItemIds().size()) {
+            throw new AppException("Một số món ăn không còn tồn tại trong giỏ hàng. Vui lòng tải lại!", HttpStatus.BAD_REQUEST);
+        }
+
+        BigDecimal totalOrderPrice = BigDecimal.ZERO;
+
+        for (CartItem item : selectedCartItems) {
+            if (!item.getFood().getShop().getId().equals(shop.getId())) {
+                throw new AppException("Lỗi bảo mật: Món '" + item.getFood().getName() + "' không thuộc quán này!", HttpStatus.BAD_REQUEST);
+            }
+            if (!Boolean.TRUE.equals(item.getFood().getIsAvailable())) {
+                throw new AppException("Món ăn '" + item.getFood().getName() + "' hiện đã hết hàng.", HttpStatus.BAD_REQUEST);
+            }
+            // Tính tổng tiền gốc
+            BigDecimal itemTotal = item.getFood().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+            totalOrderPrice = totalOrderPrice.add(itemTotal);
+        }
+
+        // 3. Xử lý logic Voucher cực mạnh (Option 2C)
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        String appliedVoucherCode = null;
+
+        if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
+            Voucher voucher = voucherRepository.findByShopIdAndCode(shop.getId(), request.getVoucherCode().trim().toUpperCase())
+                    .orElseThrow(() -> new AppException("Mã giảm giá không tồn tại", HttpStatus.BAD_REQUEST));
+
+            LocalDateTime now = LocalDateTime.now();
+            if (!Boolean.TRUE.equals(voucher.getIsActive()) ||
+                    (voucher.getStartDate() != null && voucher.getStartDate().isAfter(now)) ||
+                    (voucher.getEndDate() != null && voucher.getEndDate().isBefore(now))) {
+                throw new AppException("Mã giảm giá đã hết hạn hoặc chưa được kích hoạt", HttpStatus.BAD_REQUEST);
             }
 
-            String dropOffPoint = request.getDropOffPoint();
-            if (request.getDropOffPointId() != null) {
-                dropOffPoint = dropOffPointRepository.findById(request.getDropOffPointId())
-                        .map(DropOffPoint::getName)
-                        .orElse(dropOffPoint);
-            }
+            BigDecimal applicableTotal = BigDecimal.ZERO;
 
-            BigDecimal discountAmount = BigDecimal.ZERO;
-            String appliedVoucherCode = null;
-
-            if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
-                java.util.Optional<Voucher> voucherOpt = voucherRepository.findByShopIdAndCode(shop.getId(), request.getVoucherCode().trim().toUpperCase());
-                if (voucherOpt.isPresent()) {
-                    Voucher voucher = voucherOpt.get();
-                    java.time.LocalDateTime now = java.time.LocalDateTime.now();
-                    boolean isValid = Boolean.TRUE.equals(voucher.getIsActive())
-                            && (voucher.getStartDate() == null || voucher.getStartDate().isBefore(now))
-                            && (voucher.getEndDate() == null || voucher.getEndDate().isAfter(now));
-
-                    if (isValid) {
-                        BigDecimal applicableTotal = BigDecimal.ZERO;
-                        if ("ALL_MENU".equals(voucher.getApplyType())) {
-                            applicableTotal = totalForShop;
-                        } else if ("SPECIFIC_FOODS".equals(voucher.getApplyType()) && voucher.getFoods() != null) {
-                            java.util.Set<UUID> applicableFoodIds = voucher.getFoods().stream().map(Food::getId).collect(Collectors.toSet());
-                            for (CartItem item : shopItems) {
-                                if (applicableFoodIds.contains(item.getFood().getId())) {
-                                    BigDecimal itemTotal = item.getFood().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-                                    applicableTotal = applicableTotal.add(itemTotal);
-                                }
-                            }
-                        }
-
-                        if (applicableTotal.compareTo(voucher.getMinOrderValue()) >= 0 && applicableTotal.compareTo(BigDecimal.ZERO) > 0) {
-                            if ("FIXED_AMOUNT".equals(voucher.getDiscountType())) {
-                                discountAmount = voucher.getDiscountValue();
-                                if (discountAmount.compareTo(totalForShop) > 0) {
-                                    discountAmount = totalForShop;
-                                }
-                            } else if ("PERCENTAGE".equals(voucher.getDiscountType())) {
-                                discountAmount = applicableTotal.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
-                                if (voucher.getMaxDiscountValue() != null && discountAmount.compareTo(voucher.getMaxDiscountValue()) > 0) {
-                                    discountAmount = voucher.getMaxDiscountValue();
-                                }
-                                if (discountAmount.compareTo(totalForShop) > 0) {
-                                    discountAmount = totalForShop;
-                                }
-                            }
-                            appliedVoucherCode = voucher.getCode();
-                        }
+            // Tính toán số tiền được phép áp dụng mã giảm giá
+            if ("ALL_MENU".equals(voucher.getApplyType())) {
+                applicableTotal = totalOrderPrice;
+            } else if ("SPECIFIC_FOODS".equals(voucher.getApplyType()) && voucher.getFoods() != null) {
+                java.util.Set<UUID> applicableFoodIds = voucher.getFoods().stream().map(Food::getId).collect(Collectors.toSet());
+                for (CartItem item : selectedCartItems) {
+                    if (applicableFoodIds.contains(item.getFood().getId())) {
+                        applicableTotal = applicableTotal.add(item.getFood().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
                     }
                 }
             }
 
-            Order order = Order.builder()
-                    .user(user)
-                    .shop(shop)
-                    .totalPrice(totalForShop.subtract(discountAmount))
-                    .status(OrderStatus.PENDING)
-                    .buildingSnapshot(buildingName)
-                    .dropOffSnapshot(dropOffPoint)
-                    .voucherCode(appliedVoucherCode)
-                    .discountAmount(discountAmount)
-                    .build();
-            List<OrderDetail> details = shopItems.stream().map(item ->
-                    OrderDetail.builder()
-                            .order(order)
-                            .foodNameSnapshot(item.getFood().getName())
-                            .priceSnapshot(item.getFood().getPrice())
-                            .quantity(item.getQuantity())
-                            .build()
-            ).collect(Collectors.toList());
-            order.setOrderDetails(details);
-            savedOrders.add(orderRepository.save(order));
-        }
-
-        cartItemRepository.deleteAll(cartItems);
-
-        List<OrderResponse> responses = savedOrders.stream().map(this::mapToOrderResponse).collect(Collectors.toList());
-        for (OrderResponse res : responses) {
-            try {
-                java.util.Optional<Order> orderOpt = savedOrders.stream().filter(o -> o.getId().equals(res.getId())).findFirst();
-                if (orderOpt.isPresent()) {
-                    String destination = "/topic/shop/" + orderOpt.get().getShop().getId() + "/orders";
-                    messagingTemplate.convertAndSend(destination, res);
-                }
-            } catch (Exception e) {
-                // Ignore to avoid blocking checkout if WebSocket fails
+            if (applicableTotal.compareTo(BigDecimal.ZERO) == 0) {
+                throw new AppException("Mã giảm giá không áp dụng cho các món trong đơn hàng này", HttpStatus.BAD_REQUEST);
             }
+
+            if (applicableTotal.compareTo(voucher.getMinOrderValue()) < 0) {
+                throw new AppException("Đơn hàng chưa đạt giá trị tối thiểu (" + voucher.getMinOrderValue() + ") để dùng mã này", HttpStatus.BAD_REQUEST);
+            }
+
+            // Tính số tiền được giảm
+            if ("FIXED_AMOUNT".equals(voucher.getDiscountType())) {
+                discountAmount = voucher.getDiscountValue();
+            } else if ("PERCENTAGE".equals(voucher.getDiscountType())) {
+                discountAmount = applicableTotal.multiply(voucher.getDiscountValue())
+                        .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+                if (voucher.getMaxDiscountValue() != null && voucher.getMaxDiscountValue().compareTo(BigDecimal.ZERO) > 0) {
+                    if (discountAmount.compareTo(voucher.getMaxDiscountValue()) > 0) {
+                        discountAmount = voucher.getMaxDiscountValue();
+                    }
+                }
+            }
+
+            // Chặn lỗi giảm giá lố tiền đơn hàng
+            if (discountAmount.compareTo(totalOrderPrice) > 0) {
+                discountAmount = totalOrderPrice;
+            }
+            appliedVoucherCode = voucher.getCode();
         }
 
-        return responses;
+        // 4. Phân giải địa chỉ giao hàng
+        String buildingName = buildingRepository.findById(request.getBuildingId())
+                .map(Building::getName)
+                .orElseThrow(() -> new AppException("Tòa nhà không tồn tại", HttpStatus.BAD_REQUEST));
+
+        String dropOffPoint = dropOffPointRepository.findById(request.getDropOffPointId())
+                .map(DropOffPoint::getName)
+                .orElseThrow(() -> new AppException("Điểm giao hàng không tồn tại", HttpStatus.BAD_REQUEST));
+
+        // 5. Cấu hình trạng thái theo Phương thức thanh toán (Bank Transfer vs Cash)
+        OrderStatus initialStatus = OrderStatus.PENDING;
+        if (request.getPaymentMethod() != null && "BANK_TRANSFER".equals(request.getPaymentMethod().name())) {
+            // Nếu bạn đã tạo AWAITING_PAYMENT trong enum thì đổi PENDING thành AWAITING_PAYMENT ở dòng dưới
+            initialStatus = OrderStatus.PENDING;
+        }
+
+        // 6. Khởi tạo Đơn hàng (Order)
+        Order order = Order.builder()
+                .user(user)
+                .shop(shop)
+                .totalPrice(totalOrderPrice.subtract(discountAmount))
+                .status(initialStatus)
+                .buildingSnapshot(buildingName)
+                .dropOffSnapshot(dropOffPoint)
+                .voucherCode(appliedVoucherCode)
+                .discountAmount(discountAmount)
+                .build();
+
+        // 7. Tạo Chi tiết Đơn hàng (OrderDetail) với cơ chế Snapshot
+        List<OrderDetail> details = selectedCartItems.stream().map(item ->
+                OrderDetail.builder()
+                        .order(order)
+                        .foodNameSnapshot(item.getFood().getName())
+                        .priceSnapshot(item.getFood().getPrice())
+                        .quantity(item.getQuantity())
+                        .build()
+        ).collect(Collectors.toList());
+
+        order.setOrderDetails(details);
+
+        // 8. Lưu DB & Dọn dẹp giỏ hàng
+        Order savedOrder = orderRepository.save(order);
+        cartItemRepository.deleteAll(selectedCartItems);
+
+        OrderResponse response = mapToOrderResponse(savedOrder);
+
+        // 9. Bắn thông báo Real-time cho Quán ăn
+        try {
+            String destination = "/topic/shop/" + shop.getId() + "/orders";
+            messagingTemplate.convertAndSend(destination, response);
+        } catch (Exception e) {
+            // Không block luồng thanh toán nếu WebSocket sập
+        }
+
+        return response;
     }
+
     @Override
     public List<OrderResponse> getActiveOrders(String phone) {
         List<OrderStatus> activeStatuses = List.of(
