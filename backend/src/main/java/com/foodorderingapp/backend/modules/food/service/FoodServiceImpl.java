@@ -110,7 +110,7 @@ public class FoodServiceImpl implements FoodService {
 
         if ((savedFood.getTags() == null || savedFood.getTags().isEmpty()) 
                 && (savedFood.getCuisine() == null || savedFood.getCuisine().isBlank())) {
-            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
@@ -165,7 +165,7 @@ public class FoodServiceImpl implements FoodService {
 
         if ((savedFood.getTags() == null || savedFood.getTags().isEmpty()) 
                 && (savedFood.getCuisine() == null || savedFood.getCuisine().isBlank())) {
-            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
