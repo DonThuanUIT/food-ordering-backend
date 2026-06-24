@@ -251,6 +251,11 @@ public class ShopServiceImpl implements ShopService {
                                     .isAvailable(f.getIsAvailable())
                                     .imageUrl(f.getImageUrl())
                                     .description(f.getDescription())
+                                    .categoryId(f.getCategory().getId())
+                                    .categoryName(f.getCategory().getName())
+                                    .tags(f.getTags())
+                                    .cuisine(f.getCuisine())
+                                    .spicyLevel(f.getSpicyLevel())
                                     .build()
                             ).toList();
                     return new CategoryMenuResponse(cat.getId(), cat.getName(), foodResponses);
