@@ -68,9 +68,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                     throw new IllegalArgumentException("Invalid JWT Token"); // Cắt đứt kết nối
                 }
             } else {
-                log.warn(" Missing Authorization header in WebSocket connect");
-                // Tạm thời chỉ cảnh báo. Nếu bạn muốn khóa chặt luôn, hãy uncomment dòng dưới:
-                // throw new IllegalArgumentException("Missing Token");
+                log.warn(" Missing Authorization header in WebSocket connect - blocking connection");
+                throw new IllegalArgumentException("Missing JWT Token");
             }
         }
         return message;

@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,8 +38,7 @@ public class ChatService {
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationService notificationService;
 
-    private User getCurrentUser() {
-        String userPhone = SecurityContextHolder.getContext().getAuthentication().getName();
+    private User getCurrentUser(String userPhone) {
         return userRepository.findByPhone(userPhone)
                 .orElseThrow(() -> new AppException("Không tìm thấy User", HttpStatus.UNAUTHORIZED));
     }
@@ -56,8 +54,8 @@ public class ChatService {
 
     // Lấy hoặc tạo phòng chat vĩnh viễn theo Shop
     @Transactional
-    public ChatRoomResponse getOrCreateRoomByShop(UUID shopId) {
-        User currentUser = getCurrentUser();
+    public ChatRoomResponse getOrCreateRoomByShop(UUID shopId, String userPhone) {
+        User currentUser = getCurrentUser(userPhone);
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new AppException("Không tìm thấy quán ăn", HttpStatus.NOT_FOUND));
 
@@ -74,8 +72,8 @@ public class ChatService {
     }
 
     @Transactional
-    public ChatMessageResponse processMessage(SendMessageRequest request) {
-        User sender = getCurrentUser();
+    public ChatMessageResponse processMessage(SendMessageRequest request, String senderPhone) {
+        User sender = getCurrentUser(senderPhone);
         ChatRoom room;
 
         if (request.getRoomId() != null) {
@@ -129,8 +127,8 @@ public class ChatService {
         return response; // Trả về DTO cho FE (Option 3)
     }
 
-    public List<ChatMessageResponse> getHistory(UUID roomId) {
-        User currentUser = getCurrentUser();
+    public List<ChatMessageResponse> getHistory(UUID roomId, String userPhone) {
+        User currentUser = getCurrentUser(userPhone);
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new AppException("Không tìm thấy phòng chat", HttpStatus.NOT_FOUND));
         validateUserInRoom(room, currentUser);
@@ -146,8 +144,8 @@ public class ChatService {
                 .collect(Collectors.toList());
     }
 
-    public List<ChatRoomResponse> getUserChatRooms() {
-        User currentUser = getCurrentUser();
+    public List<ChatRoomResponse> getUserChatRooms(String userPhone) {
+        User currentUser = getCurrentUser(userPhone);
         String role = currentUser.getRole().name();
 
         Iterable<ChatRoom> rooms = ("VENDOR".equalsIgnoreCase(role) || "ADMIN".equalsIgnoreCase(role))
@@ -162,8 +160,8 @@ public class ChatService {
     }
 
     @Transactional
-    public void markAsRead(UUID roomId) {
-        User currentUser = getCurrentUser();
+    public void markAsRead(UUID roomId, String userPhone) {
+        User currentUser = getCurrentUser(userPhone);
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new AppException("Không tìm thấy phòng chat", HttpStatus.NOT_FOUND));
         validateUserInRoom(room, currentUser);
@@ -176,16 +174,16 @@ public class ChatService {
         chatRoomRepository.save(room);
     }
 
-    public long getUnreadCountByRoom(UUID roomId) {
-        User currentUser = getCurrentUser();
+    public long getUnreadCountByRoom(UUID roomId, String userPhone) {
+        User currentUser = getCurrentUser(userPhone);
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new AppException("Phòng chat không tồn tại", HttpStatus.NOT_FOUND));
         validateUserInRoom(room, currentUser);
         return calculateUnreadCount(room, currentUser);
     }
 
-    public long getTotalUnreadCount() {
-        return getUserChatRooms().stream().mapToLong(ChatRoomResponse::getUnreadCount).sum();
+    public long getTotalUnreadCount(String userPhone) {
+        return getUserChatRooms(userPhone).stream().mapToLong(ChatRoomResponse::getUnreadCount).sum();
     }
 
     // ---- HÀM TIỆN ÍCH BỔ TRỢ ----
