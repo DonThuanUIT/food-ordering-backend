@@ -37,4 +37,10 @@ public class ChatRoom {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "student_last_read_at")
+    private LocalDateTime studentLastReadAt;
+
+    @Column(name = "shop_last_read_at")
+    private LocalDateTime shopLastReadAt;
 }
