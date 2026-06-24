@@ -31,6 +31,7 @@ public class FoodServiceImpl implements FoodService {
     private final FoodRepository foodRepository;
     private final CategoryRepository categoryRepository;
     private final ShopRepository shopRepository;
+    private final GeminiService geminiService;
 
     private Shop validateShopOwnership(UUID shopId, String vendorPhone) {
         Shop shop = shopRepository.findById(shopId)
@@ -98,9 +99,19 @@ public class FoodServiceImpl implements FoodService {
                 .description(request.getDescription())
                 .price(request.getPrice())
                 .imageUrl(request.getImageUrl())
+                .tags(request.getTags())
+                .cuisine(request.getCuisine())
+                .spicyLevel(request.getSpicyLevel() != null ? request.getSpicyLevel() : 0)
                 .build();
 
-        return mapToResponse(foodRepository.save(food));
+        Food savedFood = foodRepository.save(food);
+
+        if ((savedFood.getTags() == null || savedFood.getTags().isEmpty()) 
+                && (savedFood.getCuisine() == null || savedFood.getCuisine().isBlank())) {
+            geminiService.analyzeFoodAsync(savedFood.getId());
+        }
+
+        return mapToResponse(savedFood);
     }
 
     @Override
@@ -129,7 +140,24 @@ public class FoodServiceImpl implements FoodService {
             food.setImageUrl(request.getImageUrl());
         }
 
-        return mapToResponse(foodRepository.save(food));
+        if (request.getTags() != null) {
+            food.setTags(request.getTags());
+        }
+        if (request.getCuisine() != null) {
+            food.setCuisine(request.getCuisine());
+        }
+        if (request.getSpicyLevel() != null) {
+            food.setSpicyLevel(request.getSpicyLevel());
+        }
+
+        Food savedFood = foodRepository.save(food);
+
+        if ((savedFood.getTags() == null || savedFood.getTags().isEmpty()) 
+                && (savedFood.getCuisine() == null || savedFood.getCuisine().isBlank())) {
+            geminiService.analyzeFoodAsync(savedFood.getId());
+        }
+
+        return mapToResponse(savedFood);
     }
 
     @Override
