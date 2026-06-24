@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronization;
 
 import java.util.List;
 import java.util.UUID;
@@ -108,7 +110,16 @@ public class FoodServiceImpl implements FoodService {
 
         if ((savedFood.getTags() == null || savedFood.getTags().isEmpty()) 
                 && (savedFood.getCuisine() == null || savedFood.getCuisine().isBlank())) {
-            geminiService.analyzeFoodAsync(savedFood.getId());
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        geminiService.analyzeFoodAsync(savedFood.getId());
+                    }
+                });
+            } else {
+                geminiService.analyzeFoodAsync(savedFood.getId());
+            }
         }
 
         return mapToResponse(savedFood);
@@ -154,7 +165,16 @@ public class FoodServiceImpl implements FoodService {
 
         if ((savedFood.getTags() == null || savedFood.getTags().isEmpty()) 
                 && (savedFood.getCuisine() == null || savedFood.getCuisine().isBlank())) {
-            geminiService.analyzeFoodAsync(savedFood.getId());
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        geminiService.analyzeFoodAsync(savedFood.getId());
+                    }
+                });
+            } else {
+                geminiService.analyzeFoodAsync(savedFood.getId());
+            }
         }
 
         return mapToResponse(savedFood);
