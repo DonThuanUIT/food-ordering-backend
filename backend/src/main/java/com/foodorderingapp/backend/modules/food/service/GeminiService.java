@@ -34,6 +34,38 @@ public class GeminiService {
     @Value("${gemini.url}")
     private String geminiUrl;
 
+    private byte[] downloadImageBytes(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return null;
+        }
+        try {
+            org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory = 
+                    new org.springframework.http.client.SimpleClientHttpRequestFactory();
+            requestFactory.setConnectTimeout(2000);
+            requestFactory.setReadTimeout(3000);
+            RestTemplate tempTemplate = new RestTemplate(requestFactory);
+            return tempTemplate.getForObject(imageUrl, byte[].class);
+        } catch (Exception e) {
+            log.warn("Failed to download image from URL: " + imageUrl + ", error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private String getMimeTypeFromUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return "image/jpeg";
+        }
+        String urlLower = url.toLowerCase();
+        if (urlLower.endsWith(".png")) {
+            return "image/png";
+        } else if (urlLower.endsWith(".webp")) {
+            return "image/webp";
+        } else if (urlLower.endsWith(".gif")) {
+            return "image/gif";
+        }
+        return "image/jpeg";
+    }
+
     @Async
     @Transactional
     public void analyzeFoodAsync(UUID foodId) {
@@ -45,9 +77,19 @@ public class GeminiService {
         }
         Food food = foodOpt.get();
         try {
+            byte[] imageBytes = downloadImageBytes(food.getImageUrl());
+            String base64Image = null;
+            String mimeType = "image/jpeg";
+            if (imageBytes != null && imageBytes.length > 0) {
+                base64Image = Base64.getEncoder().encodeToString(imageBytes);
+                mimeType = getMimeTypeFromUrl(food.getImageUrl());
+                log.info("Successfully downloaded and base64-encoded image for foodId: {}, size: {} bytes", foodId, imageBytes.length);
+            }
+
             // Build prompt
             String prompt = String.format(
-                "Hãy phân tích món ăn có tên là \"%s\" (Mô tả hiện tại: \"%s\", URL ảnh: \"%s\"). " +
+                "Hãy phân tích món ăn có tên là \"%s\" (Mô tả hiện tại: \"%s\"). " +
+                "Nếu có hình ảnh đính kèm, hãy quan sát kỹ hình ảnh món ăn thực tế để đưa ra đánh giá chính xác nhất. " +
                 "Hãy trích xuất: " +
                 "1. Danh sách từ 3 đến 8 thẻ (tags) tiếng Việt viết thường, không dấu cách, ngăn cách bằng dấu gạch ngang nếu là từ ghép (ví dụ: \"cay\", \"mon-nuoc\", \"bun\", \"an-sang\"). " +
                 "2. Vùng miền ẩm thực phù hợp nhất (ví dụ: \"Miền Trung\", \"Miền Bắc\", \"Miền Nam\", \"Tây Âu\", \"Hàn Quốc\", \"Nhật Bản\", \"Đồ ăn nhanh\"). " +
@@ -56,18 +98,44 @@ public class GeminiService {
                 "Định dạng kết quả trả về bắt buộc phải là một đối tượng JSON hợp lệ có dạng: " +
                 "{\"tags\":[\"tag1\",\"tag2\"],\"cuisine\":\"Tên Vùng Miền\",\"spicyLevel\":1,\"suggestedDescription\":\"Mô tả ngắn...\"}",
                 food.getName(),
-                food.getDescription() != null ? food.getDescription() : "",
-                food.getImageUrl() != null ? food.getImageUrl() : ""
+                food.getDescription() != null ? food.getDescription() : ""
             );
 
-            String responseText = callGeminiApi(prompt, true);
+            GeminiRequest requestPayload;
+            if (base64Image != null) {
+                List<GeminiRequest.Part> parts = new ArrayList<>();
+                parts.add(GeminiRequest.Part.builder()
+                        .inlineData(GeminiRequest.InlineData.builder()
+                                .mimeType(mimeType)
+                                .data(base64Image)
+                                .build())
+                        .build());
+                parts.add(GeminiRequest.Part.builder().text(prompt).build());
+
+                GeminiRequest.Content content = GeminiRequest.Content.builder().parts(parts).build();
+                requestPayload = GeminiRequest.builder()
+                        .contents(Collections.singletonList(content))
+                        .generationConfig(GeminiRequest.GenerationConfig.builder()
+                                .responseMimeType("application/json")
+                                .build())
+                        .build();
+            } else {
+                requestPayload = GeminiRequest.fromPrompt(prompt, true);
+            }
+
+            String responseText = callGeminiApi(requestPayload);
             if (responseText == null || responseText.isBlank()) {
                 log.warn("Gemini returned empty response for food: {}", food.getName());
                 useFallback(food);
                 return;
             }
 
-            GeminiFoodAnalysis analysis = objectMapper.readValue(responseText, GeminiFoodAnalysis.class);
+            String cleanedResponse = responseText.trim();
+            if (cleanedResponse.startsWith("```")) {
+                cleanedResponse = cleanedResponse.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```$", "").trim();
+            }
+
+            GeminiFoodAnalysis analysis = objectMapper.readValue(cleanedResponse, GeminiFoodAnalysis.class);
             if (analysis != null) {
                 if (analysis.getTags() != null && (food.getTags() == null || food.getTags().isEmpty())) {
                     food.setTags(analysis.getTags());
@@ -168,25 +236,29 @@ public class GeminiService {
                 menuJsonStr
             );
 
-            String responseText = callGeminiApi(prompt, true);
+            String responseText = callGeminiApi(GeminiRequest.fromPrompt(prompt, true));
             if (responseText == null || responseText.isBlank()) {
                 return Collections.emptyList();
             }
 
-            return objectMapper.readValue(responseText, new TypeReference<List<GeminiRecommendationMatch>>() {});
+            String cleanedResponse = responseText.trim();
+            if (cleanedResponse.startsWith("```")) {
+                cleanedResponse = cleanedResponse.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```$", "").trim();
+            }
+
+            return objectMapper.readValue(cleanedResponse, new TypeReference<List<GeminiRecommendationMatch>>() {});
         } catch (Exception e) {
             log.error("Error getting recommendation matches from Gemini", e);
             return Collections.emptyList();
         }
     }
 
-    private String callGeminiApi(String prompt, boolean requireJson) {
+    private String callGeminiApi(GeminiRequest requestPayload) {
         String url = geminiUrl + "?key=" + apiKey;
         
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        GeminiRequest requestPayload = GeminiRequest.fromPrompt(prompt, requireJson);
         HttpEntity<GeminiRequest> entity = new HttpEntity<>(requestPayload, headers);
 
         try {
