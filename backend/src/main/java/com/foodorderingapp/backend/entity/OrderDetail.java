@@ -36,4 +36,8 @@ public class OrderDetail {
 
     @Column(nullable = false)
     private Integer quantity;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "food_id", nullable = true)
+    private Food food;
 }

@@ -9,17 +9,19 @@ import com.foodorderingapp.backend.entity.*;
 import com.foodorderingapp.backend.core.enums.OrderStatus;
 import com.foodorderingapp.backend.core.exception.AppException;
 import com.foodorderingapp.backend.modules.cart.repository.CartItemRepository;
-import com.foodorderingapp.backend.modules.order.repository.OrderRepository;
-import com.foodorderingapp.backend.modules.order.repository.OrderDetailRepository;
-import com.foodorderingapp.backend.modules.order.repository.ReviewRepository;
+import com.foodorderingapp.backend.modules.order.repository.*;
 import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
 import com.foodorderingapp.backend.modules.building.repository.BuildingRepository;
 import com.foodorderingapp.backend.modules.building.repository.DropOffPointRepository;
 import com.foodorderingapp.backend.modules.order.OrderService;
 import com.foodorderingapp.backend.modules.voucher.repository.VoucherRepository;
 import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
+import com.foodorderingapp.backend.modules.food.repository.FoodRepository;
+import com.foodorderingapp.backend.modules.order.dto.request.ReviewSubmitRequest;
 import com.foodorderingapp.backend.entity.Voucher;
 import com.foodorderingapp.backend.entity.Food;
+import com.foodorderingapp.backend.entity.ShopReview;
+import com.foodorderingapp.backend.entity.FoodReview;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -41,6 +43,9 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ReviewRepository reviewRepository;
+    private final ShopReviewRepository shopReviewRepository;
+    private final FoodReviewRepository foodReviewRepository;
+    private final FoodRepository foodRepository;
     private final BuildingRepository buildingRepository;
     private final DropOffPointRepository dropOffPointRepository;
     private final VoucherRepository voucherRepository;
@@ -53,6 +58,8 @@ public class OrderServiceImpl implements OrderService {
                         .foodName(d.getFoodNameSnapshot())
                         .price(d.getPriceSnapshot())
                         .quantity(d.getQuantity())
+                        .foodId(d.getFood() != null ? d.getFood().getId() : null)
+                        .imageUrl(d.getFood() != null ? d.getFood().getImageUrl() : null)
                         .build())
                 .collect(Collectors.toList());
 
@@ -198,6 +205,7 @@ public class OrderServiceImpl implements OrderService {
         List<OrderDetail> details = selectedCartItems.stream().map(item ->
                 OrderDetail.builder()
                         .order(order)
+                        .food(item.getFood())
                         .foodNameSnapshot(item.getFood().getName())
                         .priceSnapshot(item.getFood().getPrice())
                         .quantity(item.getQuantity())
@@ -239,29 +247,60 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderResponse> getOrderHistory(String phone){
         return orderRepository.findOrderHistoryByPhone(phone).stream().map(this::mapToOrderResponse).collect(Collectors.toList());
     }
+
     @Override
     @Transactional
-    public Review createReview (UUID orderId, ReviewRequest request, String phone){
+    public void submitOrderReview(UUID orderId, ReviewSubmitRequest request, String phone) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException("Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND));
         if (!order.getUser().getPhone().equals(phone)) {
             throw new AppException("Bạn không có quyền đánh giá đơn hàng này", HttpStatus.FORBIDDEN);
         }
-        if (order.getStatus() != OrderStatus.COMPLETED) {
+        if (order.getStatus() != OrderStatus.COMPLETED && order.getStatus() != OrderStatus.RECEIVED) {
             throw new AppException("Chỉ đơn hàng đã hoàn thành mới có thể đánh giá", HttpStatus.BAD_REQUEST);
         }
         if (reviewRepository.existsByOrderId(orderId)) {
             throw new AppException("Đơn hàng này đã được đánh giá rồi", HttpStatus.CONFLICT);
         }
-        Review review = Review.builder()
-                .order(order)
-                .user(order.getUser())
-                .rating(request.getRating())
-                .comment(request.getComment())
-                .build();
 
-        return reviewRepository.save(review);
+        // 1. Save Order/Delivery Review
+        if (request.getOrderRating() != null) {
+            Review review = Review.builder()
+                    .order(order)
+                    .user(order.getUser())
+                    .rating(request.getOrderRating())
+                    .comment(request.getOrderComment())
+                    .build();
+            reviewRepository.save(review);
+        }
 
+        // 2. Save Shop Review
+        if (request.getShopRating() != null) {
+            ShopReview shopReview = ShopReview.builder()
+                    .order(order)
+                    .user(order.getUser())
+                    .shop(order.getShop())
+                    .rating(request.getShopRating())
+                    .comment(request.getShopComment())
+                    .build();
+            shopReviewRepository.save(shopReview);
+        }
+
+        // 3. Save Food Reviews
+        if (request.getFoodReviews() != null) {
+            for (ReviewSubmitRequest.FoodReviewItem item : request.getFoodReviews()) {
+                Food food = foodRepository.findById(item.getFoodId())
+                        .orElseThrow(() -> new AppException("Không tìm thấy món ăn: " + item.getFoodId(), HttpStatus.NOT_FOUND));
+                FoodReview foodReview = FoodReview.builder()
+                        .order(order)
+                        .user(order.getUser())
+                        .food(food)
+                        .rating(item.getRating())
+                        .comment(item.getComment())
+                        .build();
+                foodReviewRepository.save(foodReview);
+            }
+        }
     }
     @Override
     public List<OrderResponse> getVendorOrders(UUID shopId, String statusName) {
