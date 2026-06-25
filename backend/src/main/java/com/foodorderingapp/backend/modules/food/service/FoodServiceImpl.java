@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronization;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +33,7 @@ public class FoodServiceImpl implements FoodService {
     private final FoodRepository foodRepository;
     private final CategoryRepository categoryRepository;
     private final ShopRepository shopRepository;
+    private final GeminiService geminiService;
 
     private Shop validateShopOwnership(UUID shopId, String vendorPhone) {
         Shop shop = shopRepository.findById(shopId)
@@ -58,6 +61,9 @@ public class FoodServiceImpl implements FoodService {
                 .isAvailable(food.getIsAvailable())
                 .categoryId(food.getCategory().getId())
                 .categoryName(food.getCategory().getName())
+                .tags(food.getTags())
+                .cuisine(food.getCuisine())
+                .spicyLevel(food.getSpicyLevel())
                 .build();
     }
 
@@ -95,9 +101,28 @@ public class FoodServiceImpl implements FoodService {
                 .description(request.getDescription())
                 .price(request.getPrice())
                 .imageUrl(request.getImageUrl())
+                .tags(request.getTags())
+                .cuisine(request.getCuisine())
+                .spicyLevel(request.getSpicyLevel() != null ? request.getSpicyLevel() : 0)
                 .build();
 
-        return mapToResponse(foodRepository.save(food));
+        Food savedFood = foodRepository.save(food);
+
+        if ((savedFood.getTags() == null || savedFood.getTags().isEmpty()) 
+                && (savedFood.getCuisine() == null || savedFood.getCuisine().isBlank())) {
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        geminiService.analyzeFoodAsync(savedFood.getId());
+                    }
+                });
+            } else {
+                geminiService.analyzeFoodAsync(savedFood.getId());
+            }
+        }
+
+        return mapToResponse(savedFood);
     }
 
     @Override
@@ -126,7 +151,33 @@ public class FoodServiceImpl implements FoodService {
             food.setImageUrl(request.getImageUrl());
         }
 
-        return mapToResponse(foodRepository.save(food));
+        if (request.getTags() != null) {
+            food.setTags(request.getTags());
+        }
+        if (request.getCuisine() != null) {
+            food.setCuisine(request.getCuisine());
+        }
+        if (request.getSpicyLevel() != null) {
+            food.setSpicyLevel(request.getSpicyLevel());
+        }
+
+        Food savedFood = foodRepository.save(food);
+
+        if ((savedFood.getTags() == null || savedFood.getTags().isEmpty()) 
+                && (savedFood.getCuisine() == null || savedFood.getCuisine().isBlank())) {
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        geminiService.analyzeFoodAsync(savedFood.getId());
+                    }
+                });
+            } else {
+                geminiService.analyzeFoodAsync(savedFood.getId());
+            }
+        }
+
+        return mapToResponse(savedFood);
     }
 
     @Override

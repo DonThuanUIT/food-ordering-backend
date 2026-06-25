@@ -119,6 +119,7 @@ public class ShopServiceImpl implements ShopService {
                 .openTime(shop.getOpenTime())
                 .closeTime(shop.getCloseTime())
                 .status(shop.getStatus().name())
+                .displayStatusText(calculateVerificationStatusText(shop.getStatus()))
                 .isActive(shop.getIsActive())
                 .isOpen(shop.getIsOpen())
                 .displayStatus(calculateDisplayStatus(shop));
@@ -184,6 +185,7 @@ public class ShopServiceImpl implements ShopService {
                 .openTime(shop.getOpenTime())
                 .closeTime(shop.getCloseTime())
                 .status(shop.getStatus().name())
+                .displayStatusText(calculateVerificationStatusText(shop.getStatus()))
                 .isActive(shop.getIsActive())
                 .displayStatus(calculateDisplayStatus(shop))
                 .coverUrl(coverUrl)
@@ -249,6 +251,11 @@ public class ShopServiceImpl implements ShopService {
                                     .isAvailable(f.getIsAvailable())
                                     .imageUrl(f.getImageUrl())
                                     .description(f.getDescription())
+                                    .categoryId(f.getCategory().getId())
+                                    .categoryName(f.getCategory().getName())
+                                    .tags(f.getTags())
+                                    .cuisine(f.getCuisine())
+                                    .spicyLevel(f.getSpicyLevel())
                                     .build()
                             ).toList();
                     return new CategoryMenuResponse(cat.getId(), cat.getName(), foodResponses);
@@ -500,5 +507,16 @@ public class ShopServiceImpl implements ShopService {
 
         shopRepository.save(shop);
         log.info("Cửa hàng {} ({}) đã đóng vĩnh viễn thành công bởi vendor {}", shop.getName(), shop.getId(), vendorPhone);
+    }
+
+    private String calculateVerificationStatusText(ShopStatus status) {
+        if (status == null) return "";
+        return switch (status) {
+            case PENDING -> "ĐANG CHỜ DUYỆT";
+            case APPROVED -> "ĐÃ PHÊ DUYỆT";
+            case REJECTED -> "ĐÃ BỊ TỪ CHỐI";
+            case BANNED -> "ĐÃ BỊ KHÓA";
+            case CLOSED -> "ĐÃ ĐÓNG CỬA VĨNH VIỄN";
+        };
     }
 }

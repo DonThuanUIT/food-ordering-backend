@@ -33,3 +33,6 @@ build/
 .vscode/
 ### Firebase Credentials ###
 src/main/resources/firebase-service-account.json
+
+### Local Configuration ###
+src/main/resources/application-local.yml

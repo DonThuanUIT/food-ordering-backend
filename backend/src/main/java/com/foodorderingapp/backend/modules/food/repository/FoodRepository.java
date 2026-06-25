@@ -45,4 +45,20 @@ public interface FoodRepository extends JpaRepository<Food, UUID> {
             org.springframework.data.domain.Pageable pageable
     );
 
+    @Query("SELECT f FROM Food f " +
+           "JOIN FETCH f.category " +
+           "JOIN FETCH f.shop s " +
+           "WHERE f.isAvailable = true " +
+           "AND s.isActive = true " +
+           "AND s.status = 'APPROVED'")
+    List<Food> findAllAvailableFoods();
+
+    @Query("SELECT f FROM Food f " +
+           "JOIN FETCH f.category " +
+           "JOIN FETCH f.shop s " +
+           "WHERE f.shop.id = :shopId " +
+           "AND f.isAvailable = true " +
+           "AND s.isActive = true " +
+           "AND s.status = 'APPROVED'")
+    List<Food> findAllAvailableFoodsByShopId(@Param("shopId") UUID shopId);
 }

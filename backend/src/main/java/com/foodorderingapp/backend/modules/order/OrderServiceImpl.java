@@ -63,6 +63,7 @@ public class OrderServiceImpl implements OrderService {
                 .customerPhone(order.getUser().getPhone())
                 .totalPrice(order.getTotalPrice())
                 .status(order.getStatus().name())
+                .displayStatus(calculateOrderDisplayStatus(order.getStatus()))
                 .building(order.getBuildingSnapshot())
                 .dropOff(order.getDropOffSnapshot())
                 .cancelReason(order.getCancelReason())
@@ -453,5 +454,17 @@ public class OrderServiceImpl implements OrderService {
         return BigDecimal.valueOf(growth).setScale(2, java.math.RoundingMode.HALF_UP).doubleValue();
     }
 
-
+    private String calculateOrderDisplayStatus(OrderStatus status) {
+        if (status == null) return "";
+        return switch (status) {
+            case PENDING -> "CHỜ XÁC NHẬN";
+            case CONFIRMED -> "ĐÃ XÁC NHẬN";
+            case DELIVERING -> "ĐANG GIAO HÀNG";
+            case RECEIVED -> "ĐÃ NHẬN";
+            case FAILED -> "THẤT BẠI";
+            case REJECTED -> "BỊ TỪ CHỐI";
+            case COMPLETED -> "ĐÃ HOÀN THÀNH";
+            case CANCELLED -> "ĐÃ HỦY";
+        };
+    }
 }

@@ -54,4 +54,15 @@ public class Food {
     @Builder.Default
     @Column(name = "is_available", nullable = false)
     private Boolean isAvailable = true;
+
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private java.util.List<String> tags;
+
+    @Column(length = 50)
+    private String cuisine;
+
+    @Builder.Default
+    @Column(name = "spicy_level")
+    private Integer spicyLevel = 0;
 }

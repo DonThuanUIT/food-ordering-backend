@@ -25,4 +25,8 @@ public class FoodResponse {
     // Các trường bắt buộc cho Vendor
     private UUID categoryId;
     private String categoryName;
+
+    private java.util.List<String> tags;
+    private String cuisine;
+    private Integer spicyLevel;
 }
