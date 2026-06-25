@@ -11,4 +11,6 @@ public class OrderDetailResponse {
     private String foodName;
     private BigDecimal price;
     private Integer quantity;
+    private java.util.UUID foodId;
+    private String imageUrl;
 }

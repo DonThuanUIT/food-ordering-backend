@@ -122,7 +122,9 @@ public class ShopServiceImpl implements ShopService {
                 .displayStatusText(calculateVerificationStatusText(shop.getStatus()))
                 .isActive(shop.getIsActive())
                 .isOpen(shop.getIsOpen())
-                .displayStatus(calculateDisplayStatus(shop));
+                .displayStatus(calculateDisplayStatus(shop))
+                .latitude(shop.getLatitude())
+                .longitude(shop.getLongitude());
 
         ShopSettings settings = shop.getSettings();
         if (settings != null) {
@@ -182,6 +184,7 @@ public class ShopServiceImpl implements ShopService {
                 .id(shop.getId())
                 .name(shop.getName())
                 .description(shop.getDescription())
+                .address(shop.getAddress())
                 .openTime(shop.getOpenTime())
                 .closeTime(shop.getCloseTime())
                 .status(shop.getStatus().name())
@@ -191,6 +194,8 @@ public class ShopServiceImpl implements ShopService {
                 .coverUrl(coverUrl)
                 .logoUrl(logoUrl)
                 .isOpen(shop.getIsOpen())
+                .latitude(shop.getLatitude())
+                .longitude(shop.getLongitude())
                 .build();
     }
 
@@ -316,6 +321,12 @@ public class ShopServiceImpl implements ShopService {
         }
         if (request.getAddress() != null) {
             shop.setAddress(request.getAddress());
+        }
+        if (request.getLatitude() != null) {
+            shop.setLatitude(request.getLatitude());
+        }
+        if (request.getLongitude() != null) {
+            shop.setLongitude(request.getLongitude());
         }
         if (request.getDescription() != null) {
             shop.setDescription(request.getDescription());

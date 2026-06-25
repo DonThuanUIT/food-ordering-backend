@@ -45,6 +45,28 @@ public class CategoryServiceImpl implements CategoryService {
                 .build();
     }
 
+    private String extractTextName(String name) {
+        if (name == null) return "";
+        int index = name.indexOf('|');
+        if (index != -1 && index < name.length() - 1) {
+            return name.substring(index + 1).trim().toLowerCase();
+        }
+        return name.trim().toLowerCase();
+    }
+
+    private String extractEmoji(String name) {
+        if (name == null) return "";
+        int index = name.indexOf('|');
+        if (index != -1) {
+            return name.substring(0, index).trim();
+        }
+        return "";
+    }
+
+    private boolean isGenericEmoji(String emoji) {
+        return "🍽️".equals(emoji);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<CategoryResponse> getAllCategories(UUID shopId, String vendorPhone) {
@@ -60,8 +82,26 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponse createCategory(UUID shopId, CategoryRequest request, String vendorPhone) {
         Shop shop = validateShopOwnership(shopId, vendorPhone);
 
-        if (categoryRepository.existsByNameAndShopId(request.getName(), shopId)) {
-            throw new AppException("This category name already exists in the store!", HttpStatus.BAD_REQUEST);
+        String newTextName = extractTextName(request.getName());
+        String newEmoji = extractEmoji(request.getName());
+        List<Category> existingCategories = categoryRepository.findAllByShopId(shopId);
+
+        boolean exists = existingCategories.stream()
+                .anyMatch(c -> extractTextName(c.getName()).equals(newTextName));
+        if (exists) {
+            throw new AppException("Tên danh mục này đã tồn tại trong cửa hàng!", HttpStatus.BAD_REQUEST);
+        }
+
+        if (isGenericEmoji(newEmoji)) {
+            boolean genericExists = existingCategories.stream()
+                    .anyMatch(c -> isGenericEmoji(extractEmoji(c.getName())));
+            if (genericExists) {
+                throw new AppException("Đã tồn tại danh mục Khác rồi!", HttpStatus.BAD_REQUEST);
+            } else {
+                if (!newTextName.equals("khác") && !newTextName.equals("other")) {
+                    throw new AppException("Bạn nên tạo danh mục này là 'Khác' vì món ăn này không có biểu tượng cụ thể.", HttpStatus.BAD_REQUEST);
+                }
+            }
         }
 
         Category category = Category.builder()
@@ -81,9 +121,28 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findByIdAndShopId(categoryId, shopId)
                 .orElseThrow(() -> new AppException("Category does not exist in this store!", HttpStatus.NOT_FOUND));
 
-        if (!category.getName().equals(request.getName()) &&
-                categoryRepository.existsByNameAndShopId(request.getName(), shopId)) {
-            throw new AppException("This category name already exists in the store!", HttpStatus.BAD_REQUEST);
+        String newTextName = extractTextName(request.getName());
+        String newEmoji = extractEmoji(request.getName());
+        List<Category> existingCategories = categoryRepository.findAllByShopId(shopId);
+
+        boolean nameExists = existingCategories.stream()
+                .filter(c -> !c.getId().equals(categoryId))
+                .anyMatch(c -> extractTextName(c.getName()).equals(newTextName));
+        if (nameExists) {
+            throw new AppException("Tên danh mục này đã tồn tại trong cửa hàng!", HttpStatus.BAD_REQUEST);
+        }
+
+        if (isGenericEmoji(newEmoji)) {
+            boolean genericExists = existingCategories.stream()
+                    .filter(c -> !c.getId().equals(categoryId))
+                    .anyMatch(c -> isGenericEmoji(extractEmoji(c.getName())));
+            if (genericExists) {
+                throw new AppException("Đã tồn tại danh mục Khác rồi!", HttpStatus.BAD_REQUEST);
+            } else {
+                if (!newTextName.equals("khác") && !newTextName.equals("other")) {
+                    throw new AppException("Bạn nên tạo danh mục này là 'Khác' vì món ăn này không có biểu tượng cụ thể.", HttpStatus.BAD_REQUEST);
+                }
+            }
         }
 
         category.setName(request.getName());

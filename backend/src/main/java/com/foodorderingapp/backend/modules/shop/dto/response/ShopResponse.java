@@ -53,4 +53,7 @@ public class ShopResponse {
     private LocalTime sunOpenTime;
     @JsonFormat(pattern = "HH:mm")
     private LocalTime sunCloseTime;
+
+    private Double latitude;
+    private Double longitude;
 }

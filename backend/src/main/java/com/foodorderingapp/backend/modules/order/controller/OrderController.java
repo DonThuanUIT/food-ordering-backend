@@ -1,12 +1,17 @@
 package com.foodorderingapp.backend.modules.order.controller;
 
 import com.foodorderingapp.backend.entity.Review;
+import com.foodorderingapp.backend.entity.ShopReview;
+import com.foodorderingapp.backend.entity.FoodReview;
 import com.foodorderingapp.backend.modules.order.OrderService;
 import com.foodorderingapp.backend.modules.order.dto.request.CheckoutRequest;
-import com.foodorderingapp.backend.modules.order.dto.request.ReviewRequest;
+import com.foodorderingapp.backend.modules.order.dto.request.ReviewSubmitRequest;
 import com.foodorderingapp.backend.modules.order.dto.request.UpdateStatusRequest;
 import com.foodorderingapp.backend.modules.order.dto.response.OrderResponse;
 import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardDto;
+import com.foodorderingapp.backend.modules.order.repository.ShopReviewRepository;
+import com.foodorderingapp.backend.modules.order.repository.FoodReviewRepository;
+import com.foodorderingapp.backend.modules.order.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -24,6 +29,9 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderService orderService;
+    private final ShopReviewRepository shopReviewRepository;
+    private final FoodReviewRepository foodReviewRepository;
+    private final ReviewRepository reviewRepository;
 
 
     @PostMapping("/checkout")
@@ -49,12 +57,39 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/reviews")
-    public ResponseEntity<Review> createReview(
+    public ResponseEntity<Void> submitReview(
             @PathVariable UUID orderId,
-            @RequestBody ReviewRequest request,
+            @RequestBody ReviewSubmitRequest request,
             Principal principal) {
-        Review review = orderService.createReview(orderId, request, principal.getName());
-        return new ResponseEntity<>(review, HttpStatus.CREATED);
+        orderService.submitOrderReview(orderId, request, principal.getName());
+        return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+
+    @GetMapping("/shop/{shopId}/reviews")
+    public ResponseEntity<List<ShopReview>> getShopReviews(@PathVariable UUID shopId) {
+        return ResponseEntity.ok(shopReviewRepository.findByShopIdOrderByCreatedAtDesc(shopId));
+    }
+
+    @GetMapping("/shop/{shopId}/delivery-reviews")
+    public ResponseEntity<List<Review>> getDeliveryReviews(@PathVariable UUID shopId) {
+        return ResponseEntity.ok(reviewRepository.findByShopIdOrderByCreatedAtDesc(shopId));
+    }
+
+    @GetMapping("/shop/{shopId}/rating")
+    public ResponseEntity<Double> getShopAverageRating(@PathVariable UUID shopId) {
+        Double avg = shopReviewRepository.getAverageRatingForShop(shopId);
+        return ResponseEntity.ok(avg != null ? avg : 0.0);
+    }
+
+    @GetMapping("/food/{foodId}/reviews")
+    public ResponseEntity<List<FoodReview>> getFoodReviews(@PathVariable UUID foodId) {
+        return ResponseEntity.ok(foodReviewRepository.findByFoodIdOrderByCreatedAtDesc(foodId));
+    }
+
+    @GetMapping("/food/{foodId}/rating")
+    public ResponseEntity<Double> getFoodAverageRating(@PathVariable UUID foodId) {
+        Double avg = foodReviewRepository.getAverageRatingForFood(foodId);
+        return ResponseEntity.ok(avg != null ? avg : 0.0);
     }
 
     @GetMapping("/shop/{shopId}")
