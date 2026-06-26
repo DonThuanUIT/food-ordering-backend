@@ -8,4 +8,5 @@ import java.util.UUID;
 
 @Repository
 public interface BuildingRepository extends JpaRepository<Building, UUID> {
+    java.util.Optional<Building> findByName(String name);
 }

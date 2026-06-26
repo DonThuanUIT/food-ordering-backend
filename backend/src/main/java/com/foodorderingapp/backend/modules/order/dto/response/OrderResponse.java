@@ -31,4 +31,11 @@ public class OrderResponse {
     private String shipperPhone;
     private Double shipperLatitude;
     private Double shipperLongitude;
+
+    private UUID shopId;
+    private String shopAddress;
+    private Double shopLatitude;
+    private Double shopLongitude;
+    private Double buildingLatitude;
+    private Double buildingLongitude;
 }

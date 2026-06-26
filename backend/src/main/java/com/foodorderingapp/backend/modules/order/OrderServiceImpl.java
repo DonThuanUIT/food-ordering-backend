@@ -64,6 +64,16 @@ public class OrderServiceImpl implements OrderService {
                         .build())
                 .collect(Collectors.toList());
 
+        Double buildingLat = null;
+        Double buildingLng = null;
+        if (order.getBuildingSnapshot() != null) {
+            java.util.Optional<Building> bOpt = buildingRepository.findByName(order.getBuildingSnapshot());
+            if (bOpt.isPresent()) {
+                buildingLat = bOpt.get().getLatitude();
+                buildingLng = bOpt.get().getLongitude();
+            }
+        }
+
         return OrderResponse.builder()
                 .id(order.getId())
                 .shopName(order.getShop().getName())
@@ -84,6 +94,12 @@ public class OrderServiceImpl implements OrderService {
                 .shipperPhone(order.getShipper() != null ? order.getShipper().getPhone() : null)
                 .shipperLatitude(order.getShipperLatitude())
                 .shipperLongitude(order.getShipperLongitude())
+                .shopId(order.getShop().getId())
+                .shopAddress(order.getShop().getAddress())
+                .shopLatitude(order.getShop().getLatitude())
+                .shopLongitude(order.getShop().getLongitude())
+                .buildingLatitude(buildingLat)
+                .buildingLongitude(buildingLng)
                 .build();
     }
 

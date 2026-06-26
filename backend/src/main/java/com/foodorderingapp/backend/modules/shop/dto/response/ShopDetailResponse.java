@@ -13,6 +13,8 @@ public record ShopDetailResponse(
         String coverUrl,
         String logoUrl,
         Boolean isOpen,
+        Double latitude,
+        Double longitude,
         List<CategoryMenuResponse> menu
 ) {
 }
