@@ -1,5 +1,6 @@
 package com.foodorderingapp.backend.modules.auth;
 
+import com.foodorderingapp.backend.modules.auth.dto.request.BaseRegisterRequest;
 import com.foodorderingapp.backend.modules.auth.dto.request.LoginRequest;
 import com.foodorderingapp.backend.modules.auth.dto.request.ResendOtpRequest;
 import com.foodorderingapp.backend.modules.auth.dto.request.StudentRegisterRequest;
@@ -52,6 +53,20 @@ public class AuthServiceImpl implements AuthService {
         emailService.sendOtpEmail(request.getEmail(), otpCode);
 
         return buildAuthResponse(user, "Đăng ký tài khoản Sinh viên thành công! Vui lòng kiểm tra email để xác thực.");
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse registerShipper(BaseRegisterRequest request) {
+        User user = prepareUserForRegistration(request.getPhone(), request.getEmail(), request.getFullName(), request.getPassword());
+        user.setRole(UserRole.SHIPPER);
+
+        userRepository.save(user);
+
+        String otpCode = otpService.generateAndSaveOtp(request.getEmail());
+        emailService.sendOtpEmail(request.getEmail(), otpCode);
+
+        return buildAuthResponse(user, "Đăng ký tài khoản Shipper thành công! Vui lòng kiểm tra email để xác thực.");
     }
 
     @Override

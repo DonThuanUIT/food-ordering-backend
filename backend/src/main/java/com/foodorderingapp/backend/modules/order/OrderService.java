@@ -25,4 +25,9 @@ public interface OrderService {
     List<OrderResponse> getVendorOrders(UUID shopId, String statusName);
     OrderResponse updateOrderStatus(UUID orderId, UpdateStatusRequest request);
     VendorDashboardDto getVendorDashboard(UUID shopId, LocalDateTime startDate, LocalDateTime endDate);
+    List<OrderResponse> getAvailableOrdersForDelivery();
+    OrderResponse claimOrder(UUID orderId, String shipperPhone);
+    OrderResponse updateShipperLocation(UUID orderId, String shipperPhone, Double latitude, Double longitude);
+    List<OrderResponse> getShipperActiveOrders(String shipperPhone);
+    List<OrderResponse> getShipperOrderHistory(String shipperPhone);
 }

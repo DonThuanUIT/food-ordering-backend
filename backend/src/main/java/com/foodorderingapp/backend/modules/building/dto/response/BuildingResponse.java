@@ -10,4 +10,6 @@ import java.util.UUID;
 public class BuildingResponse {
     private UUID id;
     private String name;
+    private Double latitude;
+    private Double longitude;
 }

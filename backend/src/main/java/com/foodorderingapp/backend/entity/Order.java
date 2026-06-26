@@ -44,6 +44,19 @@ public class Order {
     private Shop shop;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shipper_id")
+    private User shipper;
+
+    @Column(name = "shipper_latitude")
+    private Double shipperLatitude;
+
+    @Column(name = "shipper_longitude")
+    private Double shipperLongitude;
+
+    @Column(name = "shipper_location_updated_at")
+    private java.time.LocalDateTime shipperLocationUpdatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bank_account_id")
     private BankAccount bankAccount;
 

@@ -25,4 +25,17 @@ public class OrderResponse {
     private List<OrderDetailResponse> details;
     private String voucherCode;
     private BigDecimal discountAmount;
+    
+    private UUID shipperId;
+    private String shipperName;
+    private String shipperPhone;
+    private Double shipperLatitude;
+    private Double shipperLongitude;
+
+    private UUID shopId;
+    private String shopAddress;
+    private Double shopLatitude;
+    private Double shopLongitude;
+    private Double buildingLatitude;
+    private Double buildingLongitude;
 }

@@ -110,6 +110,37 @@ public class OrderController {
         return ResponseEntity.ok(updatedOrder);
     }
 
+    @GetMapping("/available-for-delivery")
+    public ResponseEntity<List<OrderResponse>> getAvailableOrdersForDelivery() {
+        return ResponseEntity.ok(orderService.getAvailableOrdersForDelivery());
+    }
+
+    @PostMapping("/{orderId}/claim")
+    public ResponseEntity<OrderResponse> claimOrder(
+            @PathVariable UUID orderId,
+            Principal principal) {
+        return ResponseEntity.ok(orderService.claimOrder(orderId, principal.getName()));
+    }
+
+    @PostMapping("/{orderId}/location")
+    public ResponseEntity<OrderResponse> updateShipperLocation(
+            @PathVariable UUID orderId,
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
+            Principal principal) {
+        return ResponseEntity.ok(orderService.updateShipperLocation(orderId, principal.getName(), latitude, longitude));
+    }
+
+    @GetMapping("/shipper/active")
+    public ResponseEntity<List<OrderResponse>> getShipperActiveOrders(Principal principal) {
+        return ResponseEntity.ok(orderService.getShipperActiveOrders(principal.getName()));
+    }
+
+    @GetMapping("/shipper/history")
+    public ResponseEntity<List<OrderResponse>> getShipperOrderHistory(Principal principal) {
+        return ResponseEntity.ok(orderService.getShipperOrderHistory(principal.getName()));
+    }
+
     @GetMapping("/{shopId}/dashboard")
     public ResponseEntity<VendorDashboardDto> getDashboardStats(
             @PathVariable UUID shopId,

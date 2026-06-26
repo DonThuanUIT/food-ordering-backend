@@ -280,6 +280,8 @@ public class ShopServiceImpl implements ShopService {
                 coverUrl,
                 logoUrl,
                 shop.getIsOpen(),
+                shop.getLatitude(),
+                shop.getLongitude(),
                 menu
         );
     }
