@@ -178,9 +178,16 @@ public class OrderServiceImpl implements OrderService {
                 .map(Building::getName)
                 .orElseThrow(() -> new AppException("Tòa nhà không tồn tại", HttpStatus.BAD_REQUEST));
 
-        String dropOffPoint = dropOffPointRepository.findById(request.getDropOffPointId())
-                .map(DropOffPoint::getName)
-                .orElseThrow(() -> new AppException("Điểm giao hàng không tồn tại", HttpStatus.BAD_REQUEST));
+        String dropOffPoint = null;
+        if (request.getDropOffPointId() != null) {
+            DropOffPoint selectedDropOffPoint = dropOffPointRepository.findById(request.getDropOffPointId())
+                    .orElseThrow(() -> new AppException("Điểm giao hàng không tồn tại", HttpStatus.BAD_REQUEST));
+            if (selectedDropOffPoint.getBuilding() == null
+                    || !request.getBuildingId().equals(selectedDropOffPoint.getBuilding().getId())) {
+                throw new AppException("Điểm giao hàng không thuộc tòa nhà đã chọn", HttpStatus.BAD_REQUEST);
+            }
+            dropOffPoint = selectedDropOffPoint.getName();
+        }
 
         // 5. Cấu hình trạng thái theo Phương thức thanh toán (Bank Transfer vs Cash)
         OrderStatus initialStatus = OrderStatus.PENDING;
