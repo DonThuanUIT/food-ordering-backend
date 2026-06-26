@@ -19,53 +19,67 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     List<Order> findByUserId (UUID userId);
     List<Order> findByUserPhone(String phone);
     @Query("SELECT DISTINCT o FROM Order o " +
-            "LEFT JOIN FETCH o.orderDetails " +
-            "LEFT JOIN FETCH o.user " +
+            "LEFT JOIN FETCH o.orderDetails od " +
+            "LEFT JOIN FETCH od.food " +
+            "LEFT JOIN FETCH o.user u " +
             "LEFT JOIN FETCH o.shop s " +
-            "WHERE o.user.phone = :phone " +
-            "AND o.status IN :statuses")
+            "LEFT JOIN FETCH o.shipper " +
+            "WHERE u.phone = :phone " +
+            "AND o.status IN :statuses " +
+            "ORDER BY o.createdAt DESC")
     List<Order> findActiveOrdersByPhone(@Param("phone") String phone,
                                         @Param("statuses") List<OrderStatus> statuses);
     @Query("SELECT DISTINCT o FROM Order o " +
-            "LEFT JOIN FETCH o.orderDetails " +
-            "JOIN o.user u " +
+            "LEFT JOIN FETCH o.orderDetails od " +
+            "LEFT JOIN FETCH od.food " +
+            "LEFT JOIN FETCH o.user u " +
+            "LEFT JOIN FETCH o.shop s " +
+            "LEFT JOIN FETCH o.shipper " +
             "WHERE u.phone = :phone " +
-            "AND o.status IN ('COMPLETED', 'CANCELLED') " +
+            "AND o.status IN ('COMPLETED', 'CANCELLED', 'RECEIVED', 'FAILED', 'REJECTED') " +
             "ORDER BY o.createdAt DESC")
     List<Order> findOrderHistoryByPhone(@Param("phone") String phone);
 
     @Query("SELECT DISTINCT o FROM Order o " +
-            "LEFT JOIN FETCH o.orderDetails " +
+            "LEFT JOIN FETCH o.orderDetails od " +
+            "LEFT JOIN FETCH od.food " +
             "LEFT JOIN FETCH o.user " +
             "LEFT JOIN FETCH o.shop s " +
+            "LEFT JOIN FETCH o.shipper " +
             "WHERE o.status = 'CONFIRMED' " +
             "AND o.shipper IS NULL " +
             "ORDER BY o.createdAt DESC")
     List<Order> findAvailableOrdersForDelivery();
 
     @Query("SELECT DISTINCT o FROM Order o " +
-            "LEFT JOIN FETCH o.orderDetails " +
+            "LEFT JOIN FETCH o.orderDetails od " +
+            "LEFT JOIN FETCH od.food " +
             "LEFT JOIN FETCH o.user " +
             "LEFT JOIN FETCH o.shop s " +
-            "WHERE o.shipper.phone = :phone " +
+            "JOIN FETCH o.shipper sh " +
+            "WHERE sh.phone = :phone " +
             "AND o.status IN ('CONFIRMED', 'DELIVERING')")
     List<Order> findActiveOrdersByShipper(@Param("phone") String phone);
 
     @Query("SELECT DISTINCT o FROM Order o " +
-            "LEFT JOIN FETCH o.orderDetails " +
+            "LEFT JOIN FETCH o.orderDetails od " +
+            "LEFT JOIN FETCH od.food " +
             "LEFT JOIN FETCH o.user " +
             "LEFT JOIN FETCH o.shop s " +
-            "WHERE o.shipper.phone = :phone " +
-            "AND o.status = 'COMPLETED' " +
+            "JOIN FETCH o.shipper sh " +
+            "WHERE sh.phone = :phone " +
+            "AND o.status IN ('COMPLETED', 'RECEIVED') " +
             "ORDER BY o.createdAt DESC")
     List<Order> findOrderHistoryByShipper(@Param("phone") String phone);
 
     @Query("SELECT o FROM Order o JOIN o.user u WHERE u.phone = :phone AND o.status = 'COMPLETED' AND o.createdAt BETWEEN :from AND :to")
     List<Order> findCompletedOrdersBetween(@Param("phone") String phone, @Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
     @Query("SELECT DISTINCT o FROM Order o " +
-            "LEFT JOIN FETCH o.orderDetails " +
+            "LEFT JOIN FETCH o.orderDetails od " +
+            "LEFT JOIN FETCH od.food " +
             "LEFT JOIN FETCH o.user " +
             "LEFT JOIN FETCH o.shop " +
+            "LEFT JOIN FETCH o.shipper " +
             "WHERE o.shop.id = :shopId " +
             "AND (:status IS NULL OR o.status = :status) " +
             "ORDER BY o.createdAt DESC")
