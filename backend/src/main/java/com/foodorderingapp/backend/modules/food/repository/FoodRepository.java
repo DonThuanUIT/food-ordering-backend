@@ -35,6 +35,7 @@ public interface FoodRepository extends JpaRepository<Food, UUID> {
             "JOIN f.category c " +
             "WHERE f.isAvailable = true " +
             "AND s.isActive = true " +
+            "AND s.isOpen = true " +
             "AND s.status = 'APPROVED' " +
             "AND (" +
             "  (s.openTime < s.closeTime AND :now BETWEEN s.openTime AND s.closeTime) OR " +
