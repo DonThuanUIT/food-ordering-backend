@@ -1,0 +1,35 @@
+-- Seed 3 CONFIRMED orders for shipper testing
+INSERT INTO "orders" ("id", "user_id", "shop_id", "bank_account_id", "total_price", "status", "payment_proof_url", "building_snapshot", "voucher_code", "discount_amount", "created_at", "shipper_id")
+VALUES
+    ('00000000-0000-0000-0000-000000000820',
+     '00000000-0000-0000-0000-000000000001',
+     '00000000-0000-0000-0000-000000000101',
+     '00000000-0000-0000-0000-000000000401',
+     70000.00, 'CONFIRMED', NULL,
+     'Tòa E2',
+     NULL, 0, NOW(), NULL),
+
+    ('00000000-0000-0000-0000-000000000821',
+     '00000000-0000-0000-0000-000000000001',
+     '00000000-0000-0000-0000-000000000104',
+     '00000000-0000-0000-0000-000000000404',
+     45000.00, 'CONFIRMED', NULL,
+     'Tòa B5',
+     NULL, 0, NOW(), NULL),
+
+    ('00000000-0000-0000-0000-000000000822',
+     '00000000-0000-0000-0000-000000000001',
+     '00000000-0000-0000-0000-000000000104',
+     '00000000-0000-0000-0000-000000000404',
+     40000.00, 'CONFIRMED', NULL,
+     'Tòa D4',
+     NULL, 0, NOW(), NULL)
+ON CONFLICT ("id") DO NOTHING;
+
+-- Seed order details
+INSERT INTO "order_details" ("id", "order_id", "food_name_snapshot", "price_snapshot", "quantity")
+VALUES
+    ('00000000-0000-0000-0000-000000000920', '00000000-0000-0000-0000-000000000820', 'Trà Sữa Trân Châu Hoàng Kim', 35000.00, 2),
+    ('00000000-0000-0000-0000-000000000921', '00000000-0000-0000-0000-000000000821', 'Bánh Mì Que Pate - 2 Que', 15000.00, 3),
+    ('00000000-0000-0000-0000-000000000922', '00000000-0000-0000-0000-000000000822', 'Phở Bò Tái', 40000.00, 1)
+ON CONFLICT ("id") DO NOTHING;

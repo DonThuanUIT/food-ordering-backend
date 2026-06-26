@@ -14,7 +14,8 @@ import java.util.UUID;
 public interface ShopReviewRepository extends JpaRepository<ShopReview, UUID> {
     boolean existsByOrderId(UUID orderId);
     Optional<ShopReview> findByOrderId(UUID orderId);
-    List<ShopReview> findByShopIdOrderByCreatedAtDesc(UUID shopId);
+    @Query("SELECT sr FROM ShopReview sr JOIN FETCH sr.user u WHERE sr.shop.id = :shopId ORDER BY sr.createdAt DESC")
+    List<ShopReview> findByShopIdOrderByCreatedAtDesc(@Param("shopId") UUID shopId);
 
     @Query("SELECT AVG(sr.rating) FROM ShopReview sr WHERE sr.shop.id = :shopId")
     Double getAverageRatingForShop(@Param("shopId") UUID shopId);

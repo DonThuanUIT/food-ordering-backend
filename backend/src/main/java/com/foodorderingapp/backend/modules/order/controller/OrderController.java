@@ -13,6 +13,8 @@ import com.foodorderingapp.backend.modules.order.repository.ShopReviewRepository
 import com.foodorderingapp.backend.modules.order.repository.FoodReviewRepository;
 import com.foodorderingapp.backend.modules.order.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
+import com.foodorderingapp.backend.modules.order.dto.response.ReviewResponse;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -66,13 +68,37 @@ public class OrderController {
     }
 
     @GetMapping("/shop/{shopId}/reviews")
-    public ResponseEntity<List<ShopReview>> getShopReviews(@PathVariable UUID shopId) {
-        return ResponseEntity.ok(shopReviewRepository.findByShopIdOrderByCreatedAtDesc(shopId));
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<ReviewResponse>> getShopReviews(@PathVariable UUID shopId) {
+        List<ReviewResponse> list = shopReviewRepository.findByShopIdOrderByCreatedAtDesc(shopId).stream()
+                .map(r -> ReviewResponse.builder()
+                        .id(r.getId())
+                        .rating(r.getRating())
+                        .comment(r.getComment())
+                        .createdAt(r.getCreatedAt())
+                        .user(ReviewResponse.UserShort.builder()
+                                .fullName(r.getUser() != null ? r.getUser().getFullName() : null)
+                                .build())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(list);
     }
 
     @GetMapping("/shop/{shopId}/delivery-reviews")
-    public ResponseEntity<List<Review>> getDeliveryReviews(@PathVariable UUID shopId) {
-        return ResponseEntity.ok(reviewRepository.findByShopIdOrderByCreatedAtDesc(shopId));
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<ReviewResponse>> getDeliveryReviews(@PathVariable UUID shopId) {
+        List<ReviewResponse> list = reviewRepository.findByShopIdOrderByCreatedAtDesc(shopId).stream()
+                .map(r -> ReviewResponse.builder()
+                        .id(r.getId())
+                        .rating(r.getRating())
+                        .comment(r.getComment())
+                        .createdAt(r.getCreatedAt())
+                        .user(ReviewResponse.UserShort.builder()
+                                .fullName(r.getUser() != null ? r.getUser().getFullName() : null)
+                                .build())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(list);
     }
 
     @GetMapping("/shop/{shopId}/rating")
@@ -82,8 +108,20 @@ public class OrderController {
     }
 
     @GetMapping("/food/{foodId}/reviews")
-    public ResponseEntity<List<FoodReview>> getFoodReviews(@PathVariable UUID foodId) {
-        return ResponseEntity.ok(foodReviewRepository.findByFoodIdOrderByCreatedAtDesc(foodId));
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<ReviewResponse>> getFoodReviews(@PathVariable UUID foodId) {
+        List<ReviewResponse> list = foodReviewRepository.findByFoodIdOrderByCreatedAtDesc(foodId).stream()
+                .map(r -> ReviewResponse.builder()
+                        .id(r.getId())
+                        .rating(r.getRating())
+                        .comment(r.getComment())
+                        .createdAt(r.getCreatedAt())
+                        .user(ReviewResponse.UserShort.builder()
+                                .fullName(r.getUser() != null ? r.getUser().getFullName() : null)
+                                .build())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(list);
     }
 
     @GetMapping("/food/{foodId}/rating")
