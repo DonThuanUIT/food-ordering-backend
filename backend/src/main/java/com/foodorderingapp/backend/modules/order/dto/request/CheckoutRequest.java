@@ -1,6 +1,5 @@
 package com.foodorderingapp.backend.modules.order.dto.request;
 
-import com.foodorderingapp.backend.core.enums.PaymentMethod;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -16,9 +15,6 @@ public class CheckoutRequest {
 
     @NotEmpty(message = "Vui lòng chọn ít nhất 1 món để thanh toán")
     private List<UUID> cartItemIds; // Chỉ lấy những món mà user đánh dấu tick ✅ trong giỏ hàng
-
-    @NotNull(message = "Phương thức thanh toán không được để trống")
-    private PaymentMethod paymentMethod;
 
     // Voucher của Quán (Có thể null nếu không dùng)
     private String voucherCode;
