@@ -19,7 +19,6 @@ public class OrderResponse {
     private String status;
     private String displayStatus;
     private String building;
-    private String dropOff;
     private String cancelReason;
     private LocalDateTime createdAt;
     private List<OrderDetailResponse> details;
