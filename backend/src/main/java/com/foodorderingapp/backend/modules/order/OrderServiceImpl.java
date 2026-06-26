@@ -22,7 +22,7 @@ import com.foodorderingapp.backend.entity.Voucher;
 import com.foodorderingapp.backend.entity.Food;
 import com.foodorderingapp.backend.entity.ShopReview;
 import com.foodorderingapp.backend.entity.FoodReview;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -518,6 +518,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<OrderResponse> getAvailableOrdersForDelivery() {
         return orderRepository.findAvailableOrdersForDelivery().stream()
                 .map(this::mapToOrderResponse)
@@ -595,6 +596,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<OrderResponse> getShipperActiveOrders(String shipperPhone) {
         return orderRepository.findActiveOrdersByShipper(shipperPhone).stream()
                 .map(this::mapToOrderResponse)
@@ -602,6 +604,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<OrderResponse> getShipperOrderHistory(String shipperPhone) {
         return orderRepository.findOrderHistoryByShipper(shipperPhone).stream()
                 .map(this::mapToOrderResponse)
