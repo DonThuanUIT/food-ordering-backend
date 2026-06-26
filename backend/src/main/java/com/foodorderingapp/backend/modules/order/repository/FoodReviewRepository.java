@@ -11,7 +11,8 @@ import java.util.UUID;
 
 @Repository
 public interface FoodReviewRepository extends JpaRepository<FoodReview, UUID> {
-    List<FoodReview> findByFoodIdOrderByCreatedAtDesc(UUID foodId);
+    @Query("SELECT fr FROM FoodReview fr JOIN FETCH fr.user u WHERE fr.food.id = :foodId ORDER BY fr.createdAt DESC")
+    List<FoodReview> findByFoodIdOrderByCreatedAtDesc(@Param("foodId") UUID foodId);
     List<FoodReview> findByOrderId(UUID orderId);
 
     @Query("SELECT AVG(fr.rating) FROM FoodReview fr WHERE fr.food.id = :foodId")

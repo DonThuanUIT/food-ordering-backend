@@ -24,6 +24,7 @@ public class OrderResponse {
     private List<OrderDetailResponse> details;
     private String voucherCode;
     private BigDecimal discountAmount;
+    private Boolean isReviewed;
     
     private UUID shipperId;
     private String shipperName;

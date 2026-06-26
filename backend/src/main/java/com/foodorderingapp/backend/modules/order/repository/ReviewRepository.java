@@ -18,6 +18,6 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     @Query("SELECT r FROM Review r JOIN FETCH r.order o JOIN FETCH o.shop JOIN FETCH r.user u WHERE u.phone = :phone ORDER BY r.createdAt DESC")
     List<Review> findByUserPhoneWithOrderAndShop(@Param("phone") String phone);
 
-    @Query("SELECT r FROM Review r JOIN r.order o WHERE o.shop.id = :shopId ORDER BY r.createdAt DESC")
+    @Query("SELECT r FROM Review r JOIN FETCH r.user u JOIN r.order o WHERE o.shop.id = :shopId ORDER BY r.createdAt DESC")
     List<Review> findByShopIdOrderByCreatedAtDesc(@Param("shopId") UUID shopId);
 }
