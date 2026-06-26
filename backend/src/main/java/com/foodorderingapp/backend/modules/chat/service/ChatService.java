@@ -3,6 +3,7 @@ package com.foodorderingapp.backend.modules.chat.service;
 import com.foodorderingapp.backend.core.exception.AppException;
 import com.foodorderingapp.backend.entity.ChatRoom;
 import com.foodorderingapp.backend.entity.Message;
+import com.foodorderingapp.backend.entity.Order;
 import com.foodorderingapp.backend.entity.Shop;
 import com.foodorderingapp.backend.entity.User;
 import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
@@ -12,6 +13,7 @@ import com.foodorderingapp.backend.modules.chat.dto.response.ChatRoomResponse;
 import com.foodorderingapp.backend.modules.chat.repository.ChatRoomRepository;
 import com.foodorderingapp.backend.modules.chat.repository.MessageRepository;
 import com.foodorderingapp.backend.modules.notification.service.NotificationService;
+import com.foodorderingapp.backend.modules.order.repository.OrderRepository;
 import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,7 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final ShopRepository shopRepository;
+    private final OrderRepository orderRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationService notificationService;
 
@@ -67,6 +70,29 @@ public class ChatService {
                             .build();
                     return chatRoomRepository.save(newRoom);
                 });
+
+        return buildChatRoomResponse(room, currentUser);
+    }
+
+    @Transactional
+    public ChatRoomResponse getOrCreateRoomByOrder(UUID orderId, String userPhone) {
+        User currentUser = getCurrentUser(userPhone);
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException("Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND));
+
+        Shop shop = order.getShop();
+        User student = order.getUser();
+        boolean isStudent = student.getId().equals(currentUser.getId());
+        boolean isVendor = shop.getOwner() != null && shop.getOwner().getId().equals(currentUser.getId());
+        if (!isStudent && !isVendor) {
+            throw new AppException("Bạn không có quyền truy cập phòng chat của đơn này", HttpStatus.FORBIDDEN);
+        }
+
+        ChatRoom room = chatRoomRepository.findByStudentIdAndShopId(student.getId(), shop.getId())
+                .orElseGet(() -> chatRoomRepository.save(ChatRoom.builder()
+                        .student(student)
+                        .shop(shop)
+                        .build()));
 
         return buildChatRoomResponse(room, currentUser);
     }
