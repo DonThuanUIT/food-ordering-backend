@@ -7,6 +7,7 @@ import com.foodorderingapp.backend.modules.cart.dto.response.CartItemResponse;
 import com.foodorderingapp.backend.modules.order.dto.response.*;
 import com.foodorderingapp.backend.entity.*;
 import com.foodorderingapp.backend.core.enums.OrderStatus;
+import com.foodorderingapp.backend.core.enums.UserRole;
 import com.foodorderingapp.backend.core.exception.AppException;
 import com.foodorderingapp.backend.modules.cart.repository.CartItemRepository;
 import com.foodorderingapp.backend.modules.order.repository.*;
@@ -510,5 +511,96 @@ public class OrderServiceImpl implements OrderService {
             case COMPLETED -> "ĐÃ HOÀN THÀNH";
             case CANCELLED -> "ĐÃ HỦY";
         };
+    }
+
+    @Override
+    public List<OrderResponse> getAvailableOrdersForDelivery() {
+        return orderRepository.findAvailableOrdersForDelivery().stream()
+                .map(this::mapToOrderResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse claimOrder(UUID orderId, String shipperPhone) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException("Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND));
+
+        User shipper = userRepository.findByPhone(shipperPhone)
+                .orElseThrow(() -> new AppException("Không tìm thấy shipper", HttpStatus.NOT_FOUND));
+
+        if (shipper.getRole() != UserRole.SHIPPER) {
+            throw new AppException("Chỉ có tài khoản Shipper mới được nhận đơn", HttpStatus.FORBIDDEN);
+        }
+
+        if (order.getStatus() != OrderStatus.CONFIRMED) {
+            throw new AppException("Đơn hàng phải ở trạng thái ĐÃ XÁC NHẬN mới có thể nhận giao", HttpStatus.BAD_REQUEST);
+        }
+
+        if (order.getShipper() != null) {
+            throw new AppException("Đơn hàng này đã có shipper khác nhận", HttpStatus.CONFLICT);
+        }
+
+        order.setShipper(shipper);
+        Order savedOrder = orderRepository.save(order);
+        OrderResponse response = mapToOrderResponse(savedOrder);
+
+        // Thông báo cho Student & Vendor qua WebSocket về việc đơn hàng đã được nhận giao
+        try {
+            String customerDestination = "/topic/orders/customer/" + order.getUser().getPhone();
+            messagingTemplate.convertAndSend(customerDestination, response);
+
+            String shopDestination = "/topic/shop/" + order.getShop().getId() + "/orders";
+            messagingTemplate.convertAndSend(shopDestination, response);
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        return response;
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse updateShipperLocation(UUID orderId, String shipperPhone, Double latitude, Double longitude) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException("Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND));
+
+        if (order.getShipper() == null || !order.getShipper().getPhone().equals(shipperPhone)) {
+            throw new AppException("Bạn không phải shipper của đơn hàng này", HttpStatus.FORBIDDEN);
+        }
+
+        order.setShipperLatitude(latitude);
+        order.setShipperLongitude(longitude);
+        order.setShipperLocationUpdatedAt(LocalDateTime.now());
+        
+        Order savedOrder = orderRepository.save(order);
+        
+        // Broadcast location update
+        try {
+            Map<String, Object> payload = Map.of(
+                "orderId", orderId.toString(),
+                "latitude", latitude,
+                "longitude", longitude
+            );
+            messagingTemplate.convertAndSend("/topic/orders/" + orderId + "/location", payload);
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        return mapToOrderResponse(savedOrder);
+    }
+
+    @Override
+    public List<OrderResponse> getShipperActiveOrders(String shipperPhone) {
+        return orderRepository.findActiveOrdersByShipper(shipperPhone).stream()
+                .map(this::mapToOrderResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<OrderResponse> getShipperOrderHistory(String shipperPhone) {
+        return orderRepository.findOrderHistoryByShipper(shipperPhone).stream()
+                .map(this::mapToOrderResponse)
+                .collect(Collectors.toList());
     }
 }
