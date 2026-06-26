@@ -23,7 +23,5 @@ public class CheckoutRequest {
     @NotNull(message = "Vui lòng chọn tòa nhà")
     private UUID buildingId;
 
-    private UUID dropOffPointId;
-
     private String note;
 }

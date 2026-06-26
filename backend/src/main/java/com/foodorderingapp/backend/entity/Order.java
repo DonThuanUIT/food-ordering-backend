@@ -73,9 +73,6 @@ public class Order {
     @Column(name = "building_snapshot")
     private String buildingSnapshot;
 
-    @Column(name = "drop_off_snapshot")
-    private String dropOffSnapshot;
-
     @Builder.Default
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderDetail> orderDetails = new ArrayList<>();

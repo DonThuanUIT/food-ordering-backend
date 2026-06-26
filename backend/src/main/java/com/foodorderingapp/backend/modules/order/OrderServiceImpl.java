@@ -13,7 +13,6 @@ import com.foodorderingapp.backend.modules.cart.repository.CartItemRepository;
 import com.foodorderingapp.backend.modules.order.repository.*;
 import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
 import com.foodorderingapp.backend.modules.building.repository.BuildingRepository;
-import com.foodorderingapp.backend.modules.building.repository.DropOffPointRepository;
 import com.foodorderingapp.backend.modules.order.OrderService;
 import com.foodorderingapp.backend.modules.voucher.repository.VoucherRepository;
 import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
@@ -48,7 +47,6 @@ public class OrderServiceImpl implements OrderService {
     private final FoodReviewRepository foodReviewRepository;
     private final FoodRepository foodRepository;
     private final BuildingRepository buildingRepository;
-    private final DropOffPointRepository dropOffPointRepository;
     private final VoucherRepository voucherRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ShopRepository shopRepository;
@@ -83,7 +81,6 @@ public class OrderServiceImpl implements OrderService {
                 .status(order.getStatus().name())
                 .displayStatus(calculateOrderDisplayStatus(order.getStatus()))
                 .building(order.getBuildingSnapshot())
-                .dropOff(order.getDropOffSnapshot())
                 .cancelReason(order.getCancelReason())
                 .createdAt(order.getCreatedAt())
                 .details(details)
@@ -200,17 +197,6 @@ public class OrderServiceImpl implements OrderService {
                 .map(Building::getName)
                 .orElseThrow(() -> new AppException("Tòa nhà không tồn tại", HttpStatus.BAD_REQUEST));
 
-        String dropOffPoint = null;
-        if (request.getDropOffPointId() != null) {
-            DropOffPoint selectedDropOffPoint = dropOffPointRepository.findById(request.getDropOffPointId())
-                    .orElseThrow(() -> new AppException("Điểm giao hàng không tồn tại", HttpStatus.BAD_REQUEST));
-            if (selectedDropOffPoint.getBuilding() == null
-                    || !request.getBuildingId().equals(selectedDropOffPoint.getBuilding().getId())) {
-                throw new AppException("Điểm giao hàng không thuộc tòa nhà đã chọn", HttpStatus.BAD_REQUEST);
-            }
-            dropOffPoint = selectedDropOffPoint.getName();
-        }
-
         // 5. Đơn mới chờ quán duyệt, thanh toán xử lý ngoài hệ thống.
         OrderStatus initialStatus = OrderStatus.PENDING;
 
@@ -221,7 +207,6 @@ public class OrderServiceImpl implements OrderService {
                 .totalPrice(totalOrderPrice.subtract(discountAmount))
                 .status(initialStatus)
                 .buildingSnapshot(buildingName)
-                .dropOffSnapshot(dropOffPoint)
                 .voucherCode(appliedVoucherCode)
                 .discountAmount(discountAmount)
                 .build();

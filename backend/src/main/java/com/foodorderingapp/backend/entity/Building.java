@@ -3,7 +3,6 @@ package com.foodorderingapp.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -27,6 +26,4 @@ public class Building {
     @Column(name = "longitude")
     private Double longitude;
 
-    @OneToMany(mappedBy = "building")
-    private List<DropOffPoint> dropOffPoints;
 }
