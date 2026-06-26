@@ -200,16 +200,19 @@ public class OrderServiceImpl implements OrderService {
                 .map(Building::getName)
                 .orElseThrow(() -> new AppException("Tòa nhà không tồn tại", HttpStatus.BAD_REQUEST));
 
-        String dropOffPoint = dropOffPointRepository.findById(request.getDropOffPointId())
-                .map(DropOffPoint::getName)
-                .orElseThrow(() -> new AppException("Điểm giao hàng không tồn tại", HttpStatus.BAD_REQUEST));
-
-        // 5. Cấu hình trạng thái theo Phương thức thanh toán (Bank Transfer vs Cash)
-        OrderStatus initialStatus = OrderStatus.PENDING;
-        if (request.getPaymentMethod() != null && "BANK_TRANSFER".equals(request.getPaymentMethod().name())) {
-            // Nếu bạn đã tạo AWAITING_PAYMENT trong enum thì đổi PENDING thành AWAITING_PAYMENT ở dòng dưới
-            initialStatus = OrderStatus.PENDING;
+        String dropOffPoint = null;
+        if (request.getDropOffPointId() != null) {
+            DropOffPoint selectedDropOffPoint = dropOffPointRepository.findById(request.getDropOffPointId())
+                    .orElseThrow(() -> new AppException("Điểm giao hàng không tồn tại", HttpStatus.BAD_REQUEST));
+            if (selectedDropOffPoint.getBuilding() == null
+                    || !request.getBuildingId().equals(selectedDropOffPoint.getBuilding().getId())) {
+                throw new AppException("Điểm giao hàng không thuộc tòa nhà đã chọn", HttpStatus.BAD_REQUEST);
+            }
+            dropOffPoint = selectedDropOffPoint.getName();
         }
+
+        // 5. Đơn mới chờ quán duyệt, thanh toán xử lý ngoài hệ thống.
+        OrderStatus initialStatus = OrderStatus.PENDING;
 
         // 6. Khởi tạo Đơn hàng (Order)
         Order order = Order.builder()
@@ -247,7 +250,7 @@ public class OrderServiceImpl implements OrderService {
             String destination = "/topic/shop/" + shop.getId() + "/orders";
             messagingTemplate.convertAndSend(destination, response);
         } catch (Exception e) {
-            // Không block luồng thanh toán nếu WebSocket sập
+            // Không block luồng đặt hàng nếu WebSocket sập
         }
 
         return response;
