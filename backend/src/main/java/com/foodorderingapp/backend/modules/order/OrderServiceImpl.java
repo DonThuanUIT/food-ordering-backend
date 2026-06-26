@@ -78,6 +78,11 @@ public class OrderServiceImpl implements OrderService {
                 .details(details)
                 .voucherCode(order.getVoucherCode())
                 .discountAmount(order.getDiscountAmount())
+                .shipperId(order.getShipper() != null ? order.getShipper().getId() : null)
+                .shipperName(order.getShipper() != null ? order.getShipper().getFullName() : null)
+                .shipperPhone(order.getShipper() != null ? order.getShipper().getPhone() : null)
+                .shipperLatitude(order.getShipperLatitude())
+                .shipperLongitude(order.getShipperLongitude())
                 .build();
     }
 

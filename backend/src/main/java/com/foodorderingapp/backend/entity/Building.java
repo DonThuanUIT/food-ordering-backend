@@ -21,6 +21,12 @@ public class Building {
     @Column(nullable = false, unique = true)
     private String name;
 
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
     @OneToMany(mappedBy = "building")
     private List<DropOffPoint> dropOffPoints;
 }

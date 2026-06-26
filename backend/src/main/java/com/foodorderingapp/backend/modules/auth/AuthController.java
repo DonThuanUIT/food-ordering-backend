@@ -1,5 +1,6 @@
 package com.foodorderingapp.backend.modules.auth;
 
+import com.foodorderingapp.backend.modules.auth.dto.request.BaseRegisterRequest;
 import com.foodorderingapp.backend.modules.auth.dto.request.LoginRequest;
 import com.foodorderingapp.backend.modules.auth.dto.request.StudentRegisterRequest;
 import com.foodorderingapp.backend.modules.auth.dto.request.VendorRegisterRequest;
@@ -26,6 +27,11 @@ public class AuthController {
     @PostMapping("/register/vendor")
     public ResponseEntity<AuthResponse> registerVendor(@Valid @RequestBody VendorRegisterRequest request) {
         return ResponseEntity.ok(authService.registerVendor(request));
+    }
+
+    @PostMapping("/register/shipper")
+    public ResponseEntity<AuthResponse> registerShipper(@Valid @RequestBody BaseRegisterRequest request) {
+        return ResponseEntity.ok(authService.registerShipper(request));
     }
 
     @PostMapping("/login")

@@ -27,6 +27,8 @@ public class BuildingService {
                 .map(b -> BuildingResponse.builder()
                         .id(b.getId())
                         .name(b.getName())
+                        .latitude(b.getLatitude())
+                        .longitude(b.getLongitude())
                         .build())
                 .collect(Collectors.toList());
     }
