@@ -28,6 +28,11 @@ public class ChatController {
     }
 
     // 2. Gửi tin nhắn (Trả về Object)
+    @GetMapping("/orders/{orderId}/room")
+    public ResponseEntity<ChatRoomResponse> getRoomByOrder(@PathVariable UUID orderId, Principal principal) {
+        return ResponseEntity.ok(chatService.getOrCreateRoomByOrder(orderId, principal.getName()));
+    }
+
     @PostMapping("/send")
     public ResponseEntity<ChatMessageResponse> sendHttpMessage(@Valid @RequestBody SendMessageRequest request,
                                                                 Principal principal) {

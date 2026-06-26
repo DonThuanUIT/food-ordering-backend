@@ -29,7 +29,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -116,6 +119,10 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // 2. Lấy dữ liệu Giỏ hàng & Validate Option 1A (Strict Shop Matching)
+        if (!isShopOpenNow(shop)) {
+            throw new AppException("Quan an hien khong trong gio mo cua", HttpStatus.BAD_REQUEST);
+        }
+
         List<CartItem> selectedCartItems = cartItemRepository.findAllById(request.getCartItemIds());
 
         if (selectedCartItems.isEmpty() || selectedCartItems.size() != request.getCartItemIds().size()) {
@@ -516,6 +523,39 @@ public class OrderServiceImpl implements OrderService {
             case COMPLETED -> "ĐÃ HOÀN THÀNH";
             case CANCELLED -> "ĐÃ HỦY";
         };
+    }
+
+    private boolean isShopOpenNow(Shop shop) {
+        LocalTime open = shop.getOpenTime();
+        LocalTime close = shop.getCloseTime();
+        ShopSettings settings = shop.getSettings();
+
+        if (settings != null) {
+            DayOfWeek today = LocalDate.now().getDayOfWeek();
+            if (today == DayOfWeek.SATURDAY && settings.getSatOpenTime() != null && settings.getSatCloseTime() != null) {
+                open = settings.getSatOpenTime();
+                close = settings.getSatCloseTime();
+            } else if (today == DayOfWeek.SUNDAY && settings.getSunOpenTime() != null && settings.getSunCloseTime() != null) {
+                open = settings.getSunOpenTime();
+                close = settings.getSunCloseTime();
+            } else if (settings.getMonFriOpenTime() != null && settings.getMonFriCloseTime() != null) {
+                open = settings.getMonFriOpenTime();
+                close = settings.getMonFriCloseTime();
+            }
+        }
+
+        if (open == null || close == null) {
+            return false;
+        }
+
+        LocalTime now = LocalTime.now();
+        if (open.equals(close)) {
+            return true;
+        }
+        if (close.isAfter(open)) {
+            return !now.isBefore(open) && !now.isAfter(close);
+        }
+        return !now.isBefore(open) || !now.isAfter(close);
     }
 
     @Override

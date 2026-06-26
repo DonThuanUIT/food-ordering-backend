@@ -21,21 +21,22 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     @Query("SELECT DISTINCT o FROM Order o " +
             "LEFT JOIN FETCH o.orderDetails od " +
             "LEFT JOIN FETCH od.food " +
-            "LEFT JOIN FETCH o.user " +
+            "LEFT JOIN FETCH o.user u " +
             "LEFT JOIN FETCH o.shop s " +
             "LEFT JOIN FETCH o.shipper " +
-            "WHERE o.user.phone = :phone " +
-            "AND o.status IN :statuses")
+            "WHERE u.phone = :phone " +
+            "AND o.status IN :statuses " +
+            "ORDER BY o.createdAt DESC")
     List<Order> findActiveOrdersByPhone(@Param("phone") String phone,
                                         @Param("statuses") List<OrderStatus> statuses);
     @Query("SELECT DISTINCT o FROM Order o " +
             "LEFT JOIN FETCH o.orderDetails od " +
             "LEFT JOIN FETCH od.food " +
-            "LEFT JOIN FETCH o.user " +
+            "LEFT JOIN FETCH o.user u " +
             "LEFT JOIN FETCH o.shop s " +
             "LEFT JOIN FETCH o.shipper " +
-            "WHERE o.user.phone = :phone " +
-            "AND o.status IN ('COMPLETED', 'CANCELLED') " +
+            "WHERE u.phone = :phone " +
+            "AND o.status IN ('COMPLETED', 'CANCELLED', 'RECEIVED', 'FAILED', 'REJECTED') " +
             "ORDER BY o.createdAt DESC")
     List<Order> findOrderHistoryByPhone(@Param("phone") String phone);
 
@@ -55,8 +56,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "LEFT JOIN FETCH od.food " +
             "LEFT JOIN FETCH o.user " +
             "LEFT JOIN FETCH o.shop s " +
-            "LEFT JOIN FETCH o.shipper " +
-            "WHERE o.shipper.phone = :phone " +
+            "JOIN FETCH o.shipper sh " +
+            "WHERE sh.phone = :phone " +
             "AND o.status IN ('CONFIRMED', 'DELIVERING')")
     List<Order> findActiveOrdersByShipper(@Param("phone") String phone);
 
@@ -65,9 +66,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "LEFT JOIN FETCH od.food " +
             "LEFT JOIN FETCH o.user " +
             "LEFT JOIN FETCH o.shop s " +
-            "LEFT JOIN FETCH o.shipper " +
-            "WHERE o.shipper.phone = :phone " +
-            "AND o.status = 'COMPLETED' " +
+            "JOIN FETCH o.shipper sh " +
+            "WHERE sh.phone = :phone " +
+            "AND o.status IN ('COMPLETED', 'RECEIVED') " +
             "ORDER BY o.createdAt DESC")
     List<Order> findOrderHistoryByShipper(@Param("phone") String phone);
 
