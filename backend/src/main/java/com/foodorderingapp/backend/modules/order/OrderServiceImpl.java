@@ -189,12 +189,8 @@ public class OrderServiceImpl implements OrderService {
             dropOffPoint = selectedDropOffPoint.getName();
         }
 
-        // 5. Cấu hình trạng thái theo Phương thức thanh toán (Bank Transfer vs Cash)
+        // 5. Đơn mới chờ quán duyệt, thanh toán xử lý ngoài hệ thống.
         OrderStatus initialStatus = OrderStatus.PENDING;
-        if (request.getPaymentMethod() != null && "BANK_TRANSFER".equals(request.getPaymentMethod().name())) {
-            // Nếu bạn đã tạo AWAITING_PAYMENT trong enum thì đổi PENDING thành AWAITING_PAYMENT ở dòng dưới
-            initialStatus = OrderStatus.PENDING;
-        }
 
         // 6. Khởi tạo Đơn hàng (Order)
         Order order = Order.builder()
@@ -232,7 +228,7 @@ public class OrderServiceImpl implements OrderService {
             String destination = "/topic/shop/" + shop.getId() + "/orders";
             messagingTemplate.convertAndSend(destination, response);
         } catch (Exception e) {
-            // Không block luồng thanh toán nếu WebSocket sập
+            // Không block luồng đặt hàng nếu WebSocket sập
         }
 
         return response;
