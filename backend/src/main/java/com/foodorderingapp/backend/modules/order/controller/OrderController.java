@@ -58,6 +58,19 @@ public class OrderController {
         return ResponseEntity.ok(history);
     }
 
+    @PatchMapping("/{orderId}/cancel")
+    public ResponseEntity<OrderResponse> cancelPendingOrder(
+            @PathVariable UUID orderId,
+            @RequestBody UpdateStatusRequest request,
+            Principal principal) {
+        OrderResponse cancelledOrder = orderService.cancelPendingOrder(
+                orderId,
+                principal.getName(),
+                request.getCancelReason()
+        );
+        return ResponseEntity.ok(cancelledOrder);
+    }
+
     @PostMapping("/{orderId}/reviews")
     public ResponseEntity<Void> submitReview(
             @PathVariable UUID orderId,

@@ -21,6 +21,7 @@ public interface OrderService {
     OrderResponse createOrder(String phone, CheckoutRequest request);
     List<OrderResponse> getActiveOrders(String phone);
     List<OrderResponse> getOrderHistory(String phone);
+    OrderResponse cancelPendingOrder(UUID orderId, String studentPhone, String cancelReason);
     void submitOrderReview(UUID orderId, com.foodorderingapp.backend.modules.order.dto.request.ReviewSubmitRequest request, String phone);
     List<OrderResponse> getVendorOrders(UUID shopId, String statusName);
     OrderResponse updateOrderStatus(UUID orderId, UpdateStatusRequest request);
