@@ -243,6 +243,10 @@ public class ShopServiceImpl implements ShopService {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new AppException("Khong tim thay cua hang voi ID: " + shopId, HttpStatus.NOT_FOUND));
 
+        if (shop.getStatus() != ShopStatus.APPROVED || !Boolean.TRUE.equals(shop.getIsActive())) {
+            throw new AppException("Quán ăn hiện không khả dụng", HttpStatus.NOT_FOUND);
+        }
+
         List<Food> foods = foodRepository.findAllByShopIdWithCategory(shopId);
         Map<Category, List<Food>> grouped = foods.stream().collect(Collectors.groupingBy(Food::getCategory));
         List<CategoryMenuResponse> menu = grouped.entrySet().stream()
@@ -400,12 +404,34 @@ public class ShopServiceImpl implements ShopService {
         return mapToResponse(updatedShop);
     }
 
+    private void applyAdminStatusAvailability(Shop shop, ShopStatus targetStatus) {
+        if (targetStatus == ShopStatus.APPROVED) {
+            shop.setIsActive(true);
+            if (shop.getIsOpen() == null) {
+                shop.setIsOpen(true);
+            }
+            return;
+        }
+
+        if (targetStatus == ShopStatus.REJECTED || targetStatus == ShopStatus.BANNED) {
+            shop.setIsActive(false);
+            shop.setIsOpen(false);
+            ShopSettings settings = shop.getSettings();
+            if (settings != null) {
+                settings.setIsOpen(false);
+            }
+        }
+    }
+
     @Override
     @Transactional
     public ShopResponse toggleShopStatus(UUID shopId, Map<String, Boolean> statusMap, String vendorPhone) {
         Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
         if (shop.getStatus() == ShopStatus.CLOSED) {
             throw new AppException("Cửa hàng này đã bị đóng vĩnh viễn và không thể bật/tắt trạng thái!", HttpStatus.BAD_REQUEST);
+        }
+        if (shop.getStatus() == ShopStatus.BANNED || shop.getStatus() == ShopStatus.REJECTED) {
+            throw new AppException("Cửa hàng hiện không được phép hoạt động", HttpStatus.BAD_REQUEST);
         }
         if (statusMap.containsKey("isActive")) {
             shop.setIsActive(statusMap.get("isActive"));
@@ -454,10 +480,12 @@ public class ShopServiceImpl implements ShopService {
             throw new AppException("KhÃ´ng thá»ƒ cáº­p nháº­t cá»­a hÃ ng Ä‘Ã£ Ä‘Ã³ng vÄ©nh viá»…n", HttpStatus.BAD_REQUEST);
         }
         if (currentStatus == targetStatus) {
-            return mapToResponse(shop);
+            applyAdminStatusAvailability(shop, targetStatus);
+            return mapToResponse(shopRepository.save(shop));
         }
 
         shop.setStatus(targetStatus);
+        applyAdminStatusAvailability(shop, targetStatus);
         Shop updatedShop = shopRepository.save(shop);
 
         String vendorEmail = shop.getOwner().getEmail();
