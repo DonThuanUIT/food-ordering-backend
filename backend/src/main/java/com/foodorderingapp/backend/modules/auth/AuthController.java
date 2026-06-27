@@ -48,4 +48,14 @@ public class AuthController {
     public ResponseEntity<AuthResponse> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
         return ResponseEntity.ok(authService.resendOtp(request));
     }
+
+    @PostMapping("/forgot-password/send-otp")
+    public ResponseEntity<AuthResponse> sendForgotPasswordOtp(@RequestParam String email) {
+        return ResponseEntity.ok(authService.sendForgotPasswordOtp(email));
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<AuthResponse> resetPassword(@Valid @RequestBody com.foodorderingapp.backend.modules.auth.dto.request.ResetPasswordRequest request) {
+        return ResponseEntity.ok(authService.resetPassword(request));
+    }
 }

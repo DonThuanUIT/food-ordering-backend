@@ -15,4 +15,6 @@ public interface AuthService {
     AuthResponse login(LoginRequest request);
     AuthResponse verifyOtp(VerifyOtpRequest request);
     AuthResponse resendOtp(ResendOtpRequest request);
+    AuthResponse sendForgotPasswordOtp(String email);
+    AuthResponse resetPassword(com.foodorderingapp.backend.modules.auth.dto.request.ResetPasswordRequest request);
 }
