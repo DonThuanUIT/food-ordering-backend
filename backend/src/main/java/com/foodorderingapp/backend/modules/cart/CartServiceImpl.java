@@ -6,6 +6,7 @@ import com.foodorderingapp.backend.modules.cart.dto.response.ShopCartResponse;
 import com.foodorderingapp.backend.entity.*;
 import com.foodorderingapp.backend.core.enums.ShopStatus;
 import com.foodorderingapp.backend.core.exception.AppException;
+import com.foodorderingapp.backend.core.util.ShopOpeningHours;
 import com.foodorderingapp.backend.modules.cart.repository.CartItemRepository;
 import com.foodorderingapp.backend.modules.cart.repository.CartRepository;
 import com.foodorderingapp.backend.modules.food.repository.FoodRepository;
@@ -36,6 +37,10 @@ public class CartServiceImpl implements CartService {
     public void addToCart(UUID foodId, Integer quantity, String note, String phone) {
         User user = userRepository.findByPhone(phone)
                 .orElseThrow(() -> new AppException("Không tìm thấy người dùng", HttpStatus.NOT_FOUND));
+
+        if (Boolean.TRUE.equals(user.getIsLocked())) {
+            throw new AppException("Tai khoan cua ban da bi khoa, khong the them mon vao gio hang", HttpStatus.FORBIDDEN);
+        }
 
         Cart cart = cartRepository.findByUserPhone(phone)
                 .orElseGet(() -> cartRepository.save(Cart.builder().user(user).build()));
@@ -112,6 +117,8 @@ public class CartServiceImpl implements CartService {
         Shop shop = food.getShop();
         return shop.getStatus() == ShopStatus.APPROVED
                 && Boolean.TRUE.equals(shop.getIsActive())
+                && Boolean.TRUE.equals(shop.getIsOpen())
+                && ShopOpeningHours.isOpenNow(shop)
                 && !isShopOwnerLocked(shop)
                 && Boolean.TRUE.equals(food.getIsAvailable());
     }

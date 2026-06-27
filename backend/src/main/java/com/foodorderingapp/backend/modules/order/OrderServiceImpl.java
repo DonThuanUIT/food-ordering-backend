@@ -10,6 +10,7 @@ import com.foodorderingapp.backend.core.enums.OrderStatus;
 import com.foodorderingapp.backend.core.enums.ShopStatus;
 import com.foodorderingapp.backend.core.enums.UserRole;
 import com.foodorderingapp.backend.core.exception.AppException;
+import com.foodorderingapp.backend.core.util.ShopOpeningHours;
 import com.foodorderingapp.backend.modules.cart.repository.CartItemRepository;
 import com.foodorderingapp.backend.modules.order.repository.*;
 import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
@@ -30,10 +31,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -112,6 +110,10 @@ public class OrderServiceImpl implements OrderService {
         User user = userRepository.findByPhone(phone)
                 .orElseThrow(() -> new AppException("Không tìm thấy người dùng", HttpStatus.NOT_FOUND));
 
+        if (Boolean.TRUE.equals(user.getIsLocked())) {
+            throw new AppException("Tai khoan cua ban da bi khoa, khong the dat hang", HttpStatus.FORBIDDEN);
+        }
+
         Shop shop = shopRepository.findById(request.getShopId())
                 .orElseThrow(() -> new AppException("Quán ăn không tồn tại", HttpStatus.NOT_FOUND));
 
@@ -123,7 +125,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // 2. Lấy dữ liệu Giỏ hàng & Validate Option 1A (Strict Shop Matching)
-        if (!isShopOpenNow(shop)) {
+        if (!ShopOpeningHours.isOpenNow(shop)) {
             throw new AppException("Quán đã đóng cửa, vui lòng đặt hàng trong giờ mở cửa", HttpStatus.BAD_REQUEST);
         }
 
@@ -485,7 +487,7 @@ public class OrderServiceImpl implements OrderService {
         java.util.Map<String, Long> statusBreakdown = new java.util.HashMap<>();
         // Tạo giá trị mặc định để tránh hiển thị thiếu trên UI Frontend
         statusBreakdown.put("PENDING", 0L);
-        statusBreakdown.put("PREPARING", 0L);
+        statusBreakdown.put("CONFIRMED", 0L);
         statusBreakdown.put("DELIVERING", 0L);
         statusBreakdown.put("COMPLETED", 0L);
         statusBreakdown.put("CANCELLED", 0L);
@@ -572,39 +574,6 @@ public class OrderServiceImpl implements OrderService {
             case COMPLETED -> "ĐÃ HOÀN THÀNH";
             case CANCELLED -> "ĐÃ HỦY";
         };
-    }
-
-    private boolean isShopOpenNow(Shop shop) {
-        LocalTime open = shop.getOpenTime();
-        LocalTime close = shop.getCloseTime();
-        ShopSettings settings = shop.getSettings();
-
-        if (settings != null) {
-            DayOfWeek today = LocalDate.now().getDayOfWeek();
-            if (today == DayOfWeek.SATURDAY && settings.getSatOpenTime() != null && settings.getSatCloseTime() != null) {
-                open = settings.getSatOpenTime();
-                close = settings.getSatCloseTime();
-            } else if (today == DayOfWeek.SUNDAY && settings.getSunOpenTime() != null && settings.getSunCloseTime() != null) {
-                open = settings.getSunOpenTime();
-                close = settings.getSunCloseTime();
-            } else if (settings.getMonFriOpenTime() != null && settings.getMonFriCloseTime() != null) {
-                open = settings.getMonFriOpenTime();
-                close = settings.getMonFriCloseTime();
-            }
-        }
-
-        if (open == null || close == null) {
-            return false;
-        }
-
-        LocalTime now = LocalTime.now();
-        if (open.equals(close)) {
-            return true;
-        }
-        if (close.isAfter(open)) {
-            return !now.isBefore(open) && !now.isAfter(close);
-        }
-        return !now.isBefore(open) || !now.isAfter(close);
     }
 
     @Override
