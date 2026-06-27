@@ -82,7 +82,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "ORDER BY o.createdAt DESC")
     List<Order> findOrderHistoryByShipper(@Param("phone") String phone);
 
-    @Query("SELECT o FROM Order o JOIN o.user u WHERE u.phone = :phone AND o.status = 'COMPLETED' AND o.createdAt BETWEEN :from AND :to")
+    @Query("SELECT o FROM Order o JOIN o.user u WHERE u.phone = :phone AND o.status IN ('COMPLETED', 'RECEIVED') AND o.createdAt BETWEEN :from AND :to")
     List<Order> findCompletedOrdersBetween(@Param("phone") String phone, @Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
     @Query("SELECT DISTINCT o FROM Order o " +
             "LEFT JOIN FETCH o.orderDetails od " +
@@ -96,10 +96,10 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     List<Order> findByShopIdAndStatus(@Param("shopId") UUID shopId,
                                       @Param("status") OrderStatus status);
     @Query(value = "SELECT " +
-            "  COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN total_price ELSE 0 END), 0) AS totalRevenue, " +
+            "  COALESCE(SUM(CASE WHEN status IN ('COMPLETED', 'RECEIVED') THEN total_price ELSE 0 END), 0) AS totalRevenue, " +
             "  COUNT(*) AS totalOrders, " +
-            "  ROUND((COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS completionRate, " +
-            "  ROUND(COALESCE(AVG(CASE WHEN status = 'COMPLETED' THEN total_price END), 0), 2) AS averageOrderValue " +
+            "  ROUND((COUNT(CASE WHEN status IN ('COMPLETED', 'RECEIVED') THEN 1 END)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS completionRate, " +
+            "  ROUND(COALESCE(AVG(CASE WHEN status IN ('COMPLETED', 'RECEIVED') THEN total_price END), 0), 2) AS averageOrderValue " +
             "FROM orders " +
             "WHERE shop_id = :shopId " +
             "  AND created_at BETWEEN :startDate AND :endDate",
@@ -109,7 +109,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
     @Query(value = "SELECT TO_CHAR(created_at, 'YYYY-MM-DD') as date, " +
-            "  COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN total_price ELSE 0 END), 0) as revenue, " +
+            "  COALESCE(SUM(CASE WHEN status IN ('COMPLETED', 'RECEIVED') THEN total_price ELSE 0 END), 0) as revenue, " +
             "  COUNT(*) as order_count " +
             "FROM orders " +
             "WHERE shop_id = :shopId AND created_at BETWEEN :startDate AND :endDate " +
@@ -127,7 +127,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "FROM order_details od " +
             "JOIN orders o ON od.order_id = o.id " +
             "WHERE o.shop_id = :shopId " +
-            "  AND o.status = 'COMPLETED' " +
+            "  AND o.status IN ('COMPLETED', 'RECEIVED') " +
             "  AND o.created_at BETWEEN :startDate AND :endDate " +
             "GROUP BY od.food_name_snapshot " + // Nhóm theo tên món ăn snapshot
             "ORDER BY quantity_sold DESC " +
@@ -146,7 +146,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
     @Query(value = "SELECT " +
-            "  COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN total_price ELSE 0 END), 0) AS totalRevenue, " +
+            "  COALESCE(SUM(CASE WHEN status IN ('COMPLETED', 'RECEIVED') THEN total_price ELSE 0 END), 0) AS totalRevenue, " +
             "  COUNT(*) AS totalOrders " +
             "FROM orders", nativeQuery = true)
     Map<String, Object> getSystemOverviewStats();

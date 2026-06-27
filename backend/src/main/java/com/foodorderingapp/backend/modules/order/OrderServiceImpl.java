@@ -7,6 +7,7 @@ import com.foodorderingapp.backend.modules.cart.dto.response.CartItemResponse;
 import com.foodorderingapp.backend.modules.order.dto.response.*;
 import com.foodorderingapp.backend.entity.*;
 import com.foodorderingapp.backend.core.enums.OrderStatus;
+import com.foodorderingapp.backend.core.enums.ShopStatus;
 import com.foodorderingapp.backend.core.enums.UserRole;
 import com.foodorderingapp.backend.core.exception.AppException;
 import com.foodorderingapp.backend.modules.cart.repository.CartItemRepository;
@@ -114,7 +115,9 @@ public class OrderServiceImpl implements OrderService {
         Shop shop = shopRepository.findById(request.getShopId())
                 .orElseThrow(() -> new AppException("Quán ăn không tồn tại", HttpStatus.NOT_FOUND));
 
-        if (!Boolean.TRUE.equals(shop.getIsOpen()) || !Boolean.TRUE.equals(shop.getIsActive())) {
+        if (shop.getStatus() != ShopStatus.APPROVED
+                || !Boolean.TRUE.equals(shop.getIsOpen())
+                || !Boolean.TRUE.equals(shop.getIsActive())) {
             throw new AppException("Quán ăn hiện đang đóng cửa hoặc ngừng hoạt động", HttpStatus.BAD_REQUEST);
         }
 
