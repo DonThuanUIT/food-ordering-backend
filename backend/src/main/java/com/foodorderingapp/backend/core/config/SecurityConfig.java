@@ -68,6 +68,11 @@ public class SecurityConfig {
                         // 3. Không gian của Vendor (Bắt buộc là VENDOR)
                         .requestMatchers("/vendor/**").hasAuthority("ROLE_VENDOR")
 
+                        // Sinh viên chỉ được hủy đơn của chính mình qua endpoint chuyên biệt.
+                        .requestMatchers(HttpMethod.PATCH, "/orders/*/cancel").hasAuthority("ROLE_STUDENT")
+
+                        // Endpoint đổi trạng thái chung được dùng cho luồng giao hàng.
+                        .requestMatchers(HttpMethod.PUT, "/orders/*/status").hasAuthority("ROLE_SHIPPER")
 
                         // 4. Các request còn lại (Bao gồm cả /cart, /orders, /upload) đều phải có Token đăng nhập
                         .anyRequest().authenticated()

@@ -268,6 +268,47 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    public OrderResponse cancelPendingOrder(UUID orderId, String studentPhone, String cancelReason) {
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new AppException("Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND));
+
+        if (order.getUser() == null || !order.getUser().getPhone().equals(studentPhone)) {
+            throw new AppException("Bạn không có quyền hủy đơn hàng này", HttpStatus.FORBIDDEN);
+        }
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new AppException("Chỉ có thể hủy đơn đang chờ quán xác nhận", HttpStatus.BAD_REQUEST);
+        }
+        if (cancelReason == null || cancelReason.isBlank()) {
+            throw new AppException("Vui lòng nhập lý do hủy đơn", HttpStatus.BAD_REQUEST);
+        }
+
+        String normalizedReason = cancelReason.trim();
+        if (normalizedReason.length() > 255) {
+            throw new AppException("Lý do hủy không được vượt quá 255 ký tự", HttpStatus.BAD_REQUEST);
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelReason(normalizedReason);
+        OrderResponse response = mapToOrderResponse(orderRepository.save(order));
+
+        try {
+            messagingTemplate.convertAndSend(
+                    "/topic/shop/" + order.getShop().getId() + "/orders",
+                    response
+            );
+            messagingTemplate.convertAndSend(
+                    "/topic/orders/customer/" + order.getUser().getPhone(),
+                    response
+            );
+        } catch (Exception ignored) {
+            // Không làm thất bại thao tác hủy nếu kênh thông báo đang gián đoạn.
+        }
+
+        return response;
+    }
+
+    @Override
+    @Transactional
     public void submitOrderReview(UUID orderId, ReviewSubmitRequest request, String phone) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException("Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND));
@@ -336,7 +377,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateOrderStatus(UUID orderId, UpdateStatusRequest request){
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new AppException("Khong tim thay don hang", HttpStatus.NOT_FOUND));
         OrderStatus newStatus;
         OrderStatus currentStatus = order.getStatus();

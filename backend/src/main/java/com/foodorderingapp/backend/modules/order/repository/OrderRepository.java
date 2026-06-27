@@ -4,7 +4,9 @@ import com.foodorderingapp.backend.entity.Order;
 import com.foodorderingapp.backend.core.enums.OrderStatus;
 import com.foodorderingapp.backend.modules.order.dto.response.DailyOrderDto;
 import com.foodorderingapp.backend.modules.order.dto.response.VendorDashboardResponse;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,10 +14,18 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 @Repository
 
 public interface OrderRepository extends JpaRepository<Order, UUID> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM Order o " +
+            "JOIN FETCH o.user " +
+            "JOIN FETCH o.shop " +
+            "WHERE o.id = :orderId")
+    Optional<Order> findByIdForUpdate(@Param("orderId") UUID orderId);
+
     List<Order> findByUserId (UUID userId);
     List<Order> findByUserPhone(String phone);
     @Query("SELECT DISTINCT o FROM Order o " +
