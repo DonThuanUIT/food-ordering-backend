@@ -237,4 +237,35 @@ public class AuthServiceImpl implements AuthService {
 
         return buildAuthResponse(user, "Mã OTP mới đã được gửi. Vui lòng kiểm tra email của bạn!");
     }
+
+    @Override
+    @Transactional
+    public AuthResponse sendForgotPasswordOtp(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException("Không tìm thấy tài khoản với email này!", HttpStatus.NOT_FOUND));
+
+        String otpCode = otpService.generateAndSaveOtp(email);
+        emailService.sendOtpEmail(email, otpCode);
+
+        log.info("Đã gửi mã OTP quên mật khẩu đến email: {}", email);
+        return buildAuthResponse(user, "Mã OTP đặt lại mật khẩu đã được gửi đến email của bạn.");
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse resetPassword(com.foodorderingapp.backend.modules.auth.dto.request.ResetPasswordRequest request) {
+        boolean isValidOtp = otpService.validateOtp(request.getEmail(), request.getOtpCode());
+        if (!isValidOtp) {
+            throw new AppException("Mã OTP không hợp lệ hoặc đã hết hạn!", HttpStatus.BAD_REQUEST);
+        }
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException("Không tìm thấy tài khoản với email này!", HttpStatus.NOT_FOUND));
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        log.info("Người dùng {} đã đặt lại mật khẩu thành công", user.getEmail());
+        return generateAuthResponse(user, "Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.");
+    }
 }

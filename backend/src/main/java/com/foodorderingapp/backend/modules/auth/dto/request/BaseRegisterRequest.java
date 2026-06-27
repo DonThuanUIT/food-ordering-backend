@@ -13,6 +13,8 @@ public class BaseRegisterRequest {
     private String phone;
 
     @NotBlank(message = "Password cannot be blank")
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,}$", 
+             message = "Mật khẩu ít nhất 8 ký tự, gồm hoa, thường, số và ký tự đặc biệt")
     private String password;
 
     @NotBlank(message = "Name cannot be blank")
