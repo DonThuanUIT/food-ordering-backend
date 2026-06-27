@@ -153,6 +153,7 @@ public class ChatService {
         return response; // Trả về DTO cho FE (Option 3)
     }
 
+    @Transactional(readOnly = true)
     public List<ChatMessageResponse> getHistory(UUID roomId, String userPhone) {
         User currentUser = getCurrentUser(userPhone);
         ChatRoom room = chatRoomRepository.findById(roomId)
@@ -170,6 +171,7 @@ public class ChatService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ChatRoomResponse> getUserChatRooms(String userPhone) {
         User currentUser = getCurrentUser(userPhone);
         String role = currentUser.getRole().name();
