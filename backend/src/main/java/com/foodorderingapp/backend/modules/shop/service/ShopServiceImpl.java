@@ -16,6 +16,7 @@ import com.foodorderingapp.backend.entity.ShopSettings;
 import com.foodorderingapp.backend.entity.User;
 import com.foodorderingapp.backend.core.enums.ShopStatus;
 import com.foodorderingapp.backend.core.exception.AppException;
+import com.foodorderingapp.backend.core.util.ShopOpeningHours;
 import com.foodorderingapp.backend.modules.food.repository.FoodRepository;
 import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
 import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
@@ -157,7 +158,7 @@ public class ShopServiceImpl implements ShopService {
         if(keyword != null && !keyword.trim().isEmpty()){
             shopPage = shopRepository.searchShops(keyword, ShopStatus.APPROVED, pageable);
         } else {
-            shopPage = shopRepository.findAllByStatusAndIsActiveTrue(ShopStatus.APPROVED, pageable);
+            shopPage = shopRepository.findVisibleStudentShops(ShopStatus.APPROVED, pageable);
         }
         List<ShopResponse> content = new ArrayList<>(shopPage.getContent().stream()
                 .map(this::mapToStudentResponse)
@@ -179,14 +180,15 @@ public class ShopServiceImpl implements ShopService {
             coverUrl = settings.getCoverUrl();
             logoUrl = settings.getLogoUrl();
         }
+        LocalTime[] hours = ShopOpeningHours.effectiveOpeningHoursToday(shop);
         
         return ShopResponse.builder()
                 .id(shop.getId())
                 .name(shop.getName())
                 .description(shop.getDescription())
                 .address(shop.getAddress())
-                .openTime(shop.getOpenTime())
-                .closeTime(shop.getCloseTime())
+                .openTime(hours[0])
+                .closeTime(hours[1])
                 .status(shop.getStatus().name())
                 .displayStatusText(calculateVerificationStatusText(shop.getStatus()))
                 .isActive(shop.getIsActive())
@@ -200,39 +202,9 @@ public class ShopServiceImpl implements ShopService {
     }
 
     private String calculateDisplayStatus(Shop shop) {
-        LocalTime now = LocalTime.now();
         String displayStatus = "ĐÓNG CỬA";
-        
-        ShopSettings settings = shop.getSettings();
-        if (Boolean.TRUE.equals(shop.getIsOpen())) {
-            LocalTime open = shop.getOpenTime();
-            LocalTime close = shop.getCloseTime();
-            
-            if (settings != null) {
-                java.time.DayOfWeek day = java.time.LocalDate.now().getDayOfWeek();
-                if (day == java.time.DayOfWeek.SATURDAY && settings.getSatOpenTime() != null && settings.getSatCloseTime() != null) {
-                    open = settings.getSatOpenTime();
-                    close = settings.getSatCloseTime();
-                } else if (day == java.time.DayOfWeek.SUNDAY && settings.getSunOpenTime() != null && settings.getSunCloseTime() != null) {
-                    open = settings.getSunOpenTime();
-                    close = settings.getSunCloseTime();
-                } else if (settings.getMonFriOpenTime() != null && settings.getMonFriCloseTime() != null) {
-                    open = settings.getMonFriOpenTime();
-                    close = settings.getMonFriCloseTime();
-                }
-            }
-
-            if (open != null && close != null) {
-                if (close.isAfter(open)) {
-                    if (now.isAfter(open) && now.isBefore(close)) {
-                        displayStatus = "ĐANG HOẠT ĐỘNG";
-                    }
-                } else {
-                    if (now.isAfter(open) || now.isBefore(close)) {
-                        displayStatus = "ĐANG HOẠT ĐỘNG";
-                    }
-                }
-            }
+        if (Boolean.TRUE.equals(shop.getIsOpen()) && ShopOpeningHours.isOpenNow(shop)) {
+            displayStatus = "ĐANG HOẠT ĐỘNG";
         }
         return displayStatus;
     }
@@ -242,6 +214,12 @@ public class ShopServiceImpl implements ShopService {
     public ShopDetailResponse getShopDetailWithMenu(UUID shopId) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new AppException("Khong tim thay cua hang voi ID: " + shopId, HttpStatus.NOT_FOUND));
+
+        if (shop.getStatus() != ShopStatus.APPROVED
+                || !Boolean.TRUE.equals(shop.getIsActive())
+                || isShopOwnerLocked(shop)) {
+            throw new AppException("Quán ăn hiện không khả dụng", HttpStatus.NOT_FOUND);
+        }
 
         List<Food> foods = foodRepository.findAllByShopIdWithCategory(shopId);
         Map<Category, List<Food>> grouped = foods.stream().collect(Collectors.groupingBy(Food::getCategory));
@@ -272,6 +250,7 @@ public class ShopServiceImpl implements ShopService {
             coverUrl = settings.getCoverUrl();
             logoUrl = settings.getLogoUrl();
         }
+        LocalTime[] hours = ShopOpeningHours.effectiveOpeningHoursToday(shop);
         return new ShopDetailResponse(
                 shop.getId(),
                 shop.getName(),
@@ -279,6 +258,8 @@ public class ShopServiceImpl implements ShopService {
                 shop.getDescription(),
                 coverUrl,
                 logoUrl,
+                hours[0],
+                hours[1],
                 shop.getIsOpen(),
                 shop.getLatitude(),
                 shop.getLongitude(),
@@ -333,11 +314,25 @@ public class ShopServiceImpl implements ShopService {
         if (request.getDescription() != null) {
             shop.setDescription(request.getDescription());
         }
+        boolean hasDaySpecificHours = request.getMonFriOpenTime() != null
+                || request.getMonFriCloseTime() != null
+                || request.getSatOpenTime() != null
+                || request.getSatCloseTime() != null
+                || request.getSunOpenTime() != null
+                || request.getSunCloseTime() != null;
         if (request.getOpenTime() != null) {
             shop.setOpenTime(request.getOpenTime());
         }
         if (request.getCloseTime() != null) {
             shop.setCloseTime(request.getCloseTime());
+        }
+        if (!hasDaySpecificHours && request.getOpenTime() != null && request.getCloseTime() != null) {
+            settings.setMonFriOpenTime(request.getOpenTime());
+            settings.setMonFriCloseTime(request.getCloseTime());
+            settings.setSatOpenTime(request.getOpenTime());
+            settings.setSatCloseTime(request.getCloseTime());
+            settings.setSunOpenTime(request.getOpenTime());
+            settings.setSunCloseTime(request.getCloseTime());
         }
         if (request.getCoverUrl() != null) {
             settings.setCoverUrl(request.getCoverUrl());
@@ -398,12 +393,34 @@ public class ShopServiceImpl implements ShopService {
         return mapToResponse(updatedShop);
     }
 
+    private void applyAdminStatusAvailability(Shop shop, ShopStatus targetStatus) {
+        if (targetStatus == ShopStatus.APPROVED) {
+            shop.setIsActive(true);
+            if (shop.getIsOpen() == null) {
+                shop.setIsOpen(true);
+            }
+            return;
+        }
+
+        if (targetStatus == ShopStatus.REJECTED || targetStatus == ShopStatus.BANNED) {
+            shop.setIsActive(false);
+            shop.setIsOpen(false);
+            ShopSettings settings = shop.getSettings();
+            if (settings != null) {
+                settings.setIsOpen(false);
+            }
+        }
+    }
+
     @Override
     @Transactional
     public ShopResponse toggleShopStatus(UUID shopId, Map<String, Boolean> statusMap, String vendorPhone) {
         Shop shop = shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
         if (shop.getStatus() == ShopStatus.CLOSED) {
             throw new AppException("Cửa hàng này đã bị đóng vĩnh viễn và không thể bật/tắt trạng thái!", HttpStatus.BAD_REQUEST);
+        }
+        if (shop.getStatus() == ShopStatus.BANNED || shop.getStatus() == ShopStatus.REJECTED) {
+            throw new AppException("Cửa hàng hiện không được phép hoạt động", HttpStatus.BAD_REQUEST);
         }
         if (statusMap.containsKey("isActive")) {
             shop.setIsActive(statusMap.get("isActive"));
@@ -442,17 +459,28 @@ public class ShopServiceImpl implements ShopService {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new AppException("Không tìm thấy quán ăn!", HttpStatus.NOT_FOUND));
 
-        if (shop.getStatus() != ShopStatus.PENDING) {
+        if (shop.getStatus() == ShopStatus.CLOSED && "REJECTED".equals(request.status())) {
             throw new AppException("Thao tác không hợp lệ. Cửa hàng này đã được xử lý duyệt hoặc từ chối trước đó!", HttpStatus.BAD_REQUEST);
         }
 
+        ShopStatus currentStatus = shop.getStatus();
         ShopStatus targetStatus = ShopStatus.valueOf(request.status());
+        if (currentStatus == ShopStatus.CLOSED) {
+            throw new AppException("KhÃ´ng thá»ƒ cáº­p nháº­t cá»­a hÃ ng Ä‘Ã£ Ä‘Ã³ng vÄ©nh viá»…n", HttpStatus.BAD_REQUEST);
+        }
+        if (currentStatus == targetStatus) {
+            applyAdminStatusAvailability(shop, targetStatus);
+            return mapToResponse(shopRepository.save(shop));
+        }
 
         shop.setStatus(targetStatus);
+        applyAdminStatusAvailability(shop, targetStatus);
         Shop updatedShop = shopRepository.save(shop);
 
         String vendorEmail = shop.getOwner().getEmail();
-        emailService.sendShopStatusHtmlEmail(vendorEmail, shop.getName(), targetStatus == ShopStatus.APPROVED);
+        if (currentStatus == ShopStatus.PENDING && targetStatus != ShopStatus.BANNED) {
+            emailService.sendShopStatusHtmlEmail(vendorEmail, shop.getName(), targetStatus == ShopStatus.APPROVED);
+        }
 
         log.info("Admin vừa cập nhật trạng thái quán {} sang {}", shopId, targetStatus);
         return mapToResponse(updatedShop);
@@ -520,6 +548,10 @@ public class ShopServiceImpl implements ShopService {
 
         shopRepository.save(shop);
         log.info("Cửa hàng {} ({}) đã đóng vĩnh viễn thành công bởi vendor {}", shop.getName(), shop.getId(), vendorPhone);
+    }
+
+    private boolean isShopOwnerLocked(Shop shop) {
+        return shop.getOwner() != null && Boolean.TRUE.equals(shop.getOwner().getIsLocked());
     }
 
     private String calculateVerificationStatusText(ShopStatus status) {

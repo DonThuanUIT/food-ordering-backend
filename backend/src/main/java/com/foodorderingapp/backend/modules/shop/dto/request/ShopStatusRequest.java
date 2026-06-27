@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Pattern;
 public record ShopStatusRequest(
         @NotBlank(message = "Trạng thái phê duyệt không được để trống")
         @Pattern(
-                regexp = "APPROVED|REJECTED",
+                regexp = "APPROVED|REJECTED|BANNED",
                 message = "Trạng thái không hợp lệ! Admin chỉ được phép duyệt (APPROVED) hoặc từ chối (REJECTED)"
         )
         String status

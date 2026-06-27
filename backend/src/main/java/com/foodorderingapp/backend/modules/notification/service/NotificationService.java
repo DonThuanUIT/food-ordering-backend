@@ -86,6 +86,10 @@ public class NotificationService {
      */
     @Transactional
     public void notifyUser(User user, String title, String body, String type, UUID referenceId) {
+        try {
+            if (user == null) {
+                return;
+            }
 
         // 1. Lưu lịch sử vào Database Neon (Để User xem lại trong tab Thông báo)
         Notification dbNotification = Notification.builder()
@@ -109,6 +113,9 @@ public class NotificationService {
         // 4. Duyệt qua từng máy và bắn thông báo
         for (UserDevice device : devices) {
             fcmService.sendPushNotification(device.getFcmToken(), title, body, dataPayload);
+        }
+        } catch (Exception e) {
+            log.warn("Could not notify user {} for type {}", user != null ? user.getId() : null, type, e);
         }
     }
 }

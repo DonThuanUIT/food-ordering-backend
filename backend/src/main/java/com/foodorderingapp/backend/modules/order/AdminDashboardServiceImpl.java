@@ -1,6 +1,7 @@
 package com.foodorderingapp.backend.modules.order;
 
 import com.foodorderingapp.backend.core.enums.ShopStatus;
+import com.foodorderingapp.backend.core.enums.UserRole;
 import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
 import com.foodorderingapp.backend.modules.order.dto.response.AdminDashboardDto;
 import com.foodorderingapp.backend.modules.order.dto.response.DailyOrderDto;
@@ -23,7 +24,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final OrderRepository orderRepository;
     @Override
     public AdminDashboardDto getAdminOverview() {
-        long totalUsers = userRepository.count();
+        long totalUsers = userRepository.countByRole(UserRole.STUDENT)
+                + userRepository.countByRole(UserRole.VENDOR);
         long totalShops = shopRepository.count();
         long pendingShops = shopRepository.countByStatus(ShopStatus.PENDING);
         long approvedShops = shopRepository.countByStatus(ShopStatus.APPROVED);

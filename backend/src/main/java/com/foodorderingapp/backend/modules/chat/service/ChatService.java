@@ -103,7 +103,7 @@ public class ChatService {
         ChatRoom room;
 
         if (request.getRoomId() != null) {
-            room = chatRoomRepository.findById(request.getRoomId())
+            room = chatRoomRepository.findByIdWithParticipants(request.getRoomId())
                     .orElseThrow(() -> new AppException("Không tìm thấy phòng chat", HttpStatus.NOT_FOUND));
             validateUserInRoom(room, sender);
         } else if (request.getShopId() != null) {
@@ -144,11 +144,21 @@ public class ChatService {
                 .build();
 
         // Broadcast qua WebSocket
-        messagingTemplate.convertAndSend("/topic/chat/" + room.getId(), response);
+        try {
+            messagingTemplate.convertAndSend("/topic/chat/" + room.getId(), response);
+        } catch (Exception e) {
+            log.warn("Could not broadcast chat message {} to room {}", message.getId(), room.getId(), e);
+        }
 
         // Bắn Notification Offline
-        User receiver = sender.getId().equals(room.getStudent().getId()) ? room.getShop().getOwner() : room.getStudent();
-        notificationService.notifyUser(receiver, "Tin nhắn từ " + sender.getFullName(), message.getContent(), "CHAT", room.getId());
+        try {
+            User receiver = sender.getId().equals(room.getStudent().getId()) ? room.getShop().getOwner() : room.getStudent();
+            if (receiver != null) {
+                notificationService.notifyUser(receiver, "Tin nhắn từ " + sender.getFullName(), message.getContent(), "CHAT", room.getId());
+            }
+        } catch (Exception e) {
+            log.warn("Could not send chat notification for message {}", message.getId(), e);
+        }
 
         return response; // Trả về DTO cho FE (Option 3)
     }
@@ -156,7 +166,7 @@ public class ChatService {
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getHistory(UUID roomId, String userPhone) {
         User currentUser = getCurrentUser(userPhone);
-        ChatRoom room = chatRoomRepository.findById(roomId)
+        ChatRoom room = chatRoomRepository.findByIdWithParticipants(roomId)
                 .orElseThrow(() -> new AppException("Không tìm thấy phòng chat", HttpStatus.NOT_FOUND));
         validateUserInRoom(room, currentUser);
 
@@ -190,7 +200,7 @@ public class ChatService {
     @Transactional
     public void markAsRead(UUID roomId, String userPhone) {
         User currentUser = getCurrentUser(userPhone);
-        ChatRoom room = chatRoomRepository.findById(roomId)
+        ChatRoom room = chatRoomRepository.findByIdWithParticipants(roomId)
                 .orElseThrow(() -> new AppException("Không tìm thấy phòng chat", HttpStatus.NOT_FOUND));
         validateUserInRoom(room, currentUser);
 
@@ -202,14 +212,16 @@ public class ChatService {
         chatRoomRepository.save(room);
     }
 
+    @Transactional(readOnly = true)
     public long getUnreadCountByRoom(UUID roomId, String userPhone) {
         User currentUser = getCurrentUser(userPhone);
-        ChatRoom room = chatRoomRepository.findById(roomId)
+        ChatRoom room = chatRoomRepository.findByIdWithParticipants(roomId)
                 .orElseThrow(() -> new AppException("Phòng chat không tồn tại", HttpStatus.NOT_FOUND));
         validateUserInRoom(room, currentUser);
         return calculateUnreadCount(room, currentUser);
     }
 
+    @Transactional(readOnly = true)
     public long getTotalUnreadCount(String userPhone) {
         return getUserChatRooms(userPhone).stream().mapToLong(ChatRoomResponse::getUnreadCount).sum();
     }
@@ -243,3 +255,4 @@ public class ChatService {
         }
     }
 }
+

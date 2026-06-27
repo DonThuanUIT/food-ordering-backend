@@ -4,7 +4,9 @@ import com.foodorderingapp.backend.modules.cart.dto.response.CartItemResponse;
 import com.foodorderingapp.backend.modules.cart.dto.response.CartResponse;
 import com.foodorderingapp.backend.modules.cart.dto.response.ShopCartResponse;
 import com.foodorderingapp.backend.entity.*;
+import com.foodorderingapp.backend.core.enums.ShopStatus;
 import com.foodorderingapp.backend.core.exception.AppException;
+import com.foodorderingapp.backend.core.util.ShopOpeningHours;
 import com.foodorderingapp.backend.modules.cart.repository.CartItemRepository;
 import com.foodorderingapp.backend.modules.cart.repository.CartRepository;
 import com.foodorderingapp.backend.modules.food.repository.FoodRepository;
@@ -36,11 +38,19 @@ public class CartServiceImpl implements CartService {
         User user = userRepository.findByPhone(phone)
                 .orElseThrow(() -> new AppException("Không tìm thấy người dùng", HttpStatus.NOT_FOUND));
 
+        if (Boolean.TRUE.equals(user.getIsLocked())) {
+            throw new AppException("Tai khoan cua ban da bi khoa, khong the them mon vao gio hang", HttpStatus.FORBIDDEN);
+        }
+
         Cart cart = cartRepository.findByUserPhone(phone)
                 .orElseGet(() -> cartRepository.save(Cart.builder().user(user).build()));
 
         Food food = foodRepository.findById(foodId)
                 .orElseThrow(() -> new AppException("Món ăn không tồn tại", HttpStatus.NOT_FOUND));
+
+        if (!isOrderableFood(food)) {
+            throw new AppException("Quán ăn hiện không khả dụng", HttpStatus.BAD_REQUEST);
+        }
 
         Optional<CartItem> existingItem = cartItemRepository.findByCartIdAndFoodId(cart.getId(), foodId);
 
@@ -63,6 +73,9 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public CartResponse getCart(String phone) {
         List<CartItem> items = cartItemRepository.findAllByUserPhone(phone);
+        items = items.stream()
+                .filter(item -> item != null && isOrderableFood(item.getFood()))
+                .toList();
 
         if (items.isEmpty()) {
             return new CartResponse(List.of(), BigDecimal.ZERO);
@@ -96,6 +109,24 @@ public class CartServiceImpl implements CartService {
                 item.getNote()
         );
     }
+
+    private boolean isOrderableFood(Food food) {
+        if (food == null || food.getShop() == null) {
+            return false;
+        }
+        Shop shop = food.getShop();
+        return shop.getStatus() == ShopStatus.APPROVED
+                && Boolean.TRUE.equals(shop.getIsActive())
+                && Boolean.TRUE.equals(shop.getIsOpen())
+                && ShopOpeningHours.isOpenNow(shop)
+                && !isShopOwnerLocked(shop)
+                && Boolean.TRUE.equals(food.getIsAvailable());
+    }
+
+    private boolean isShopOwnerLocked(Shop shop) {
+        return shop.getOwner() != null && Boolean.TRUE.equals(shop.getOwner().getIsLocked());
+    }
+
     @Override
     @Transactional
     public void updateCartItemQuantity(UUID cartItemId, Integer quantity, String phone) {
