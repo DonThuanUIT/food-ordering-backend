@@ -6,6 +6,7 @@ import com.foodorderingapp.backend.entity.Category;
 import com.foodorderingapp.backend.entity.Food;
 import com.foodorderingapp.backend.entity.Shop;
 import com.foodorderingapp.backend.core.exception.AppException;
+import com.foodorderingapp.backend.core.util.ShopOpeningHours;
 import com.foodorderingapp.backend.modules.food.repository.CategoryRepository;
 import com.foodorderingapp.backend.modules.food.dto.response.FoodExploreResponse;
 import com.foodorderingapp.backend.modules.food.repository.FoodRepository;
@@ -13,6 +14,7 @@ import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
 import com.foodorderingapp.backend.modules.food.service.FoodService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -79,8 +81,30 @@ public class FoodServiceImpl implements FoodService {
         return foodRepository.findByShopIdAndOptionalCategory(shopId, categoryId, pageable)
                 .map(this::mapToResponse);
     }
+    @Transactional(readOnly = true)
     public Page<FoodExploreResponse> getExploreFoods(Pageable pageable){
-        return foodRepository.exploreFoods(java.time.LocalTime.now(), pageable);
+        List<FoodExploreResponse> availableFoods = foodRepository.findAllAvailableFoods().stream()
+                .filter(food -> Boolean.TRUE.equals(food.getShop().getIsOpen()))
+                .filter(food -> ShopOpeningHours.isOpenNow(food.getShop()))
+                .map(food -> new FoodExploreResponse(
+                        food.getId(),
+                        food.getName(),
+                        food.getPrice(),
+                        food.getImageUrl(),
+                        food.getDescription(),
+                        food.getShop().getId(),
+                        food.getShop().getName(),
+                        food.getCategory().getName()
+                ))
+                .collect(Collectors.toList());
+
+        int start = (int) pageable.getOffset();
+        if (start >= availableFoods.size()) {
+            return new PageImpl<>(List.of(), pageable, availableFoods.size());
+        }
+
+        int end = Math.min(start + pageable.getPageSize(), availableFoods.size());
+        return new PageImpl<>(availableFoods.subList(start, end), pageable, availableFoods.size());
     }
 
     @Override

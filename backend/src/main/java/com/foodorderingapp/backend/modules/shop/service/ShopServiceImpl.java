@@ -16,6 +16,7 @@ import com.foodorderingapp.backend.entity.ShopSettings;
 import com.foodorderingapp.backend.entity.User;
 import com.foodorderingapp.backend.core.enums.ShopStatus;
 import com.foodorderingapp.backend.core.exception.AppException;
+import com.foodorderingapp.backend.core.util.ShopOpeningHours;
 import com.foodorderingapp.backend.modules.food.repository.FoodRepository;
 import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
 import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
@@ -179,14 +180,15 @@ public class ShopServiceImpl implements ShopService {
             coverUrl = settings.getCoverUrl();
             logoUrl = settings.getLogoUrl();
         }
+        LocalTime[] hours = ShopOpeningHours.effectiveOpeningHoursToday(shop);
         
         return ShopResponse.builder()
                 .id(shop.getId())
                 .name(shop.getName())
                 .description(shop.getDescription())
                 .address(shop.getAddress())
-                .openTime(shop.getOpenTime())
-                .closeTime(shop.getCloseTime())
+                .openTime(hours[0])
+                .closeTime(hours[1])
                 .status(shop.getStatus().name())
                 .displayStatusText(calculateVerificationStatusText(shop.getStatus()))
                 .isActive(shop.getIsActive())
@@ -200,39 +202,9 @@ public class ShopServiceImpl implements ShopService {
     }
 
     private String calculateDisplayStatus(Shop shop) {
-        LocalTime now = LocalTime.now();
         String displayStatus = "ĐÓNG CỬA";
-        
-        ShopSettings settings = shop.getSettings();
-        if (Boolean.TRUE.equals(shop.getIsOpen())) {
-            LocalTime open = shop.getOpenTime();
-            LocalTime close = shop.getCloseTime();
-            
-            if (settings != null) {
-                java.time.DayOfWeek day = java.time.LocalDate.now().getDayOfWeek();
-                if (day == java.time.DayOfWeek.SATURDAY && settings.getSatOpenTime() != null && settings.getSatCloseTime() != null) {
-                    open = settings.getSatOpenTime();
-                    close = settings.getSatCloseTime();
-                } else if (day == java.time.DayOfWeek.SUNDAY && settings.getSunOpenTime() != null && settings.getSunCloseTime() != null) {
-                    open = settings.getSunOpenTime();
-                    close = settings.getSunCloseTime();
-                } else if (settings.getMonFriOpenTime() != null && settings.getMonFriCloseTime() != null) {
-                    open = settings.getMonFriOpenTime();
-                    close = settings.getMonFriCloseTime();
-                }
-            }
-
-            if (open != null && close != null) {
-                if (close.isAfter(open)) {
-                    if (now.isAfter(open) && now.isBefore(close)) {
-                        displayStatus = "ĐANG HOẠT ĐỘNG";
-                    }
-                } else {
-                    if (now.isAfter(open) || now.isBefore(close)) {
-                        displayStatus = "ĐANG HOẠT ĐỘNG";
-                    }
-                }
-            }
+        if (Boolean.TRUE.equals(shop.getIsOpen()) && ShopOpeningHours.isOpenNow(shop)) {
+            displayStatus = "ĐANG HOẠT ĐỘNG";
         }
         return displayStatus;
     }
@@ -278,6 +250,7 @@ public class ShopServiceImpl implements ShopService {
             coverUrl = settings.getCoverUrl();
             logoUrl = settings.getLogoUrl();
         }
+        LocalTime[] hours = ShopOpeningHours.effectiveOpeningHoursToday(shop);
         return new ShopDetailResponse(
                 shop.getId(),
                 shop.getName(),
@@ -285,8 +258,8 @@ public class ShopServiceImpl implements ShopService {
                 shop.getDescription(),
                 coverUrl,
                 logoUrl,
-                shop.getOpenTime(),
-                shop.getCloseTime(),
+                hours[0],
+                hours[1],
                 shop.getIsOpen(),
                 shop.getLatitude(),
                 shop.getLongitude(),
@@ -341,11 +314,25 @@ public class ShopServiceImpl implements ShopService {
         if (request.getDescription() != null) {
             shop.setDescription(request.getDescription());
         }
+        boolean hasDaySpecificHours = request.getMonFriOpenTime() != null
+                || request.getMonFriCloseTime() != null
+                || request.getSatOpenTime() != null
+                || request.getSatCloseTime() != null
+                || request.getSunOpenTime() != null
+                || request.getSunCloseTime() != null;
         if (request.getOpenTime() != null) {
             shop.setOpenTime(request.getOpenTime());
         }
         if (request.getCloseTime() != null) {
             shop.setCloseTime(request.getCloseTime());
+        }
+        if (!hasDaySpecificHours && request.getOpenTime() != null && request.getCloseTime() != null) {
+            settings.setMonFriOpenTime(request.getOpenTime());
+            settings.setMonFriCloseTime(request.getCloseTime());
+            settings.setSatOpenTime(request.getOpenTime());
+            settings.setSatCloseTime(request.getCloseTime());
+            settings.setSunOpenTime(request.getOpenTime());
+            settings.setSunCloseTime(request.getCloseTime());
         }
         if (request.getCoverUrl() != null) {
             settings.setCoverUrl(request.getCoverUrl());

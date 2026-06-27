@@ -105,18 +105,18 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "  ROUND(COALESCE(AVG(CASE WHEN status IN ('COMPLETED', 'RECEIVED') THEN total_price END), 0), 2) AS averageOrderValue " +
             "FROM orders " +
             "WHERE shop_id = :shopId " +
-            "  AND created_at BETWEEN :startDate AND :endDate",
+            "  AND COALESCE(completed_at, created_at) BETWEEN :startDate AND :endDate",
             nativeQuery = true)
     VendorDashboardResponse getVendorDashboardStats(
             @Param("shopId") UUID shopId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
-    @Query(value = "SELECT TO_CHAR(created_at, 'YYYY-MM-DD') as date, " +
+    @Query(value = "SELECT TO_CHAR(COALESCE(completed_at, created_at), 'YYYY-MM-DD') as date, " +
             "  COALESCE(SUM(CASE WHEN status IN ('COMPLETED', 'RECEIVED') THEN total_price ELSE 0 END), 0) as revenue, " +
             "  COUNT(*) as order_count " +
             "FROM orders " +
-            "WHERE shop_id = :shopId AND created_at BETWEEN :startDate AND :endDate " +
-            "GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD') " +
+            "WHERE shop_id = :shopId AND COALESCE(completed_at, created_at) BETWEEN :startDate AND :endDate " +
+            "GROUP BY TO_CHAR(COALESCE(completed_at, created_at), 'YYYY-MM-DD') " +
             "ORDER BY date ASC", nativeQuery = true)
     List<Map<String, Object>> getOrderTrends(
             @Param("shopId") UUID shopId,
@@ -131,7 +131,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "JOIN orders o ON od.order_id = o.id " +
             "WHERE o.shop_id = :shopId " +
             "  AND o.status IN ('COMPLETED', 'RECEIVED') " +
-            "  AND o.created_at BETWEEN :startDate AND :endDate " +
+            "  AND COALESCE(o.completed_at, o.created_at) BETWEEN :startDate AND :endDate " +
             "GROUP BY od.food_name_snapshot " + // Nhóm theo tên món ăn snapshot
             "ORDER BY quantity_sold DESC " +
             "LIMIT 5", nativeQuery = true)
@@ -142,7 +142,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     @Query(value = "SELECT status, COUNT(*) as count " +
             "FROM orders " +
-            "WHERE shop_id = :shopId AND created_at BETWEEN :startDate AND :endDate " +
+            "WHERE shop_id = :shopId AND COALESCE(completed_at, created_at) BETWEEN :startDate AND :endDate " +
             "GROUP BY status", nativeQuery = true)
     List<Map<String, Object>> getOrderStatusBreakdown(
             @Param("shopId") UUID shopId,
