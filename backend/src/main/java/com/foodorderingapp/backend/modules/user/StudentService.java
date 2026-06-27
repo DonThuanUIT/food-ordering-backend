@@ -92,7 +92,7 @@ public class StudentService {
         }
 
         for (Order order : completedOrders) {
-            LocalDate orderDate = order.getCreatedAt().toLocalDate();
+            LocalDate orderDate = order.getCompletedAt().toLocalDate();
             LocalDate weekStart = orderDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
             LocalDate weekEnd = weekStart.plusDays(6);
             String weekKey = weekStart.toString() + " - " + weekEnd.toString();

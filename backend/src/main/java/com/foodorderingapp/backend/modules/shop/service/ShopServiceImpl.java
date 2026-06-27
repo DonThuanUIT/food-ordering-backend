@@ -157,7 +157,7 @@ public class ShopServiceImpl implements ShopService {
         if(keyword != null && !keyword.trim().isEmpty()){
             shopPage = shopRepository.searchShops(keyword, ShopStatus.APPROVED, pageable);
         } else {
-            shopPage = shopRepository.findAllByStatusAndIsActiveTrue(ShopStatus.APPROVED, pageable);
+            shopPage = shopRepository.findVisibleStudentShops(ShopStatus.APPROVED, pageable);
         }
         List<ShopResponse> content = new ArrayList<>(shopPage.getContent().stream()
                 .map(this::mapToStudentResponse)
@@ -243,7 +243,9 @@ public class ShopServiceImpl implements ShopService {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new AppException("Khong tim thay cua hang voi ID: " + shopId, HttpStatus.NOT_FOUND));
 
-        if (shop.getStatus() != ShopStatus.APPROVED || !Boolean.TRUE.equals(shop.getIsActive())) {
+        if (shop.getStatus() != ShopStatus.APPROVED
+                || !Boolean.TRUE.equals(shop.getIsActive())
+                || isShopOwnerLocked(shop)) {
             throw new AppException("Quán ăn hiện không khả dụng", HttpStatus.NOT_FOUND);
         }
 
@@ -559,6 +561,10 @@ public class ShopServiceImpl implements ShopService {
 
         shopRepository.save(shop);
         log.info("Cửa hàng {} ({}) đã đóng vĩnh viễn thành công bởi vendor {}", shop.getName(), shop.getId(), vendorPhone);
+    }
+
+    private boolean isShopOwnerLocked(Shop shop) {
+        return shop.getOwner() != null && Boolean.TRUE.equals(shop.getOwner().getIsLocked());
     }
 
     private String calculateVerificationStatusText(ShopStatus status) {

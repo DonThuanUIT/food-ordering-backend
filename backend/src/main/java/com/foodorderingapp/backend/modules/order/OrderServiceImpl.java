@@ -117,7 +117,8 @@ public class OrderServiceImpl implements OrderService {
 
         if (shop.getStatus() != ShopStatus.APPROVED
                 || !Boolean.TRUE.equals(shop.getIsOpen())
-                || !Boolean.TRUE.equals(shop.getIsActive())) {
+                || !Boolean.TRUE.equals(shop.getIsActive())
+                || isShopOwnerLocked(shop)) {
             throw new AppException("Quán ăn hiện đang đóng cửa hoặc ngừng hoạt động", HttpStatus.BAD_REQUEST);
         }
 
@@ -411,6 +412,10 @@ public class OrderServiceImpl implements OrderService {
             order.setCancelReason(request.getCancelReason());
         }
         order.setStatus(newStatus);
+        if ((newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.RECEIVED)
+                && order.getCompletedAt() == null) {
+            order.setCompletedAt(LocalDateTime.now());
+        }
         OrderResponse response = mapToOrderResponse(orderRepository.save(order));
 
         try {
@@ -694,5 +699,9 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findOrderHistoryByShipper(shipperPhone).stream()
                 .map(this::mapToOrderResponse)
                 .collect(Collectors.toList());
+    }
+
+    private boolean isShopOwnerLocked(Shop shop) {
+        return shop.getOwner() != null && Boolean.TRUE.equals(shop.getOwner().getIsLocked());
     }
 }
