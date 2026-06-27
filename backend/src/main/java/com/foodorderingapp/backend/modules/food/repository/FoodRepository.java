@@ -33,10 +33,12 @@ public interface FoodRepository extends JpaRepository<Food, UUID> {
             "FROM Food f " +
             "JOIN f.shop s " +
             "JOIN f.category c " +
+            "JOIN s.owner o " +
             "WHERE f.isAvailable = true " +
             "AND s.isActive = true " +
             "AND s.isOpen = true " +
             "AND s.status = 'APPROVED' " +
+            "AND (o.isLocked = false OR o.isLocked IS NULL) " +
             "AND (" +
             "  (s.openTime < s.closeTime AND :now BETWEEN s.openTime AND s.closeTime) OR " +
             "  (s.openTime > s.closeTime AND (:now >= s.openTime OR :now <= s.closeTime))" +
@@ -49,17 +51,21 @@ public interface FoodRepository extends JpaRepository<Food, UUID> {
     @Query("SELECT f FROM Food f " +
            "JOIN FETCH f.category " +
            "JOIN FETCH f.shop s " +
+           "JOIN FETCH s.owner o " +
            "WHERE f.isAvailable = true " +
            "AND s.isActive = true " +
-           "AND s.status = 'APPROVED'")
+           "AND s.status = 'APPROVED' " +
+           "AND (o.isLocked = false OR o.isLocked IS NULL)")
     List<Food> findAllAvailableFoods();
 
     @Query("SELECT f FROM Food f " +
            "JOIN FETCH f.category " +
            "JOIN FETCH f.shop s " +
+           "JOIN FETCH s.owner o " +
            "WHERE f.shop.id = :shopId " +
            "AND f.isAvailable = true " +
            "AND s.isActive = true " +
-           "AND s.status = 'APPROVED'")
+           "AND s.status = 'APPROVED' " +
+           "AND (o.isLocked = false OR o.isLocked IS NULL)")
     List<Food> findAllAvailableFoodsByShopId(@Param("shopId") UUID shopId);
 }
