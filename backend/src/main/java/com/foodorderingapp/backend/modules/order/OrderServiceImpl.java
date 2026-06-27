@@ -120,7 +120,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 2. Lấy dữ liệu Giỏ hàng & Validate Option 1A (Strict Shop Matching)
         if (!isShopOpenNow(shop)) {
-            throw new AppException("Quan an hien khong trong gio mo cua", HttpStatus.BAD_REQUEST);
+            throw new AppException("Quán đã đóng cửa, vui lòng đặt hàng trong giờ mở cửa", HttpStatus.BAD_REQUEST);
         }
 
         List<CartItem> selectedCartItems = cartItemRepository.findAllById(request.getCartItemIds());

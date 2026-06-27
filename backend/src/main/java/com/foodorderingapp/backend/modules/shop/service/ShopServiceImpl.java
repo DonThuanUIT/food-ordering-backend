@@ -279,6 +279,8 @@ public class ShopServiceImpl implements ShopService {
                 shop.getDescription(),
                 coverUrl,
                 logoUrl,
+                shop.getOpenTime(),
+                shop.getCloseTime(),
                 shop.getIsOpen(),
                 shop.getLatitude(),
                 shop.getLongitude(),
@@ -442,17 +444,26 @@ public class ShopServiceImpl implements ShopService {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new AppException("Không tìm thấy quán ăn!", HttpStatus.NOT_FOUND));
 
-        if (shop.getStatus() != ShopStatus.PENDING) {
+        if (shop.getStatus() == ShopStatus.CLOSED && "REJECTED".equals(request.status())) {
             throw new AppException("Thao tác không hợp lệ. Cửa hàng này đã được xử lý duyệt hoặc từ chối trước đó!", HttpStatus.BAD_REQUEST);
         }
 
+        ShopStatus currentStatus = shop.getStatus();
         ShopStatus targetStatus = ShopStatus.valueOf(request.status());
+        if (currentStatus == ShopStatus.CLOSED) {
+            throw new AppException("KhÃ´ng thá»ƒ cáº­p nháº­t cá»­a hÃ ng Ä‘Ã£ Ä‘Ã³ng vÄ©nh viá»…n", HttpStatus.BAD_REQUEST);
+        }
+        if (currentStatus == targetStatus) {
+            return mapToResponse(shop);
+        }
 
         shop.setStatus(targetStatus);
         Shop updatedShop = shopRepository.save(shop);
 
         String vendorEmail = shop.getOwner().getEmail();
-        emailService.sendShopStatusHtmlEmail(vendorEmail, shop.getName(), targetStatus == ShopStatus.APPROVED);
+        if (currentStatus == ShopStatus.PENDING && targetStatus != ShopStatus.BANNED) {
+            emailService.sendShopStatusHtmlEmail(vendorEmail, shop.getName(), targetStatus == ShopStatus.APPROVED);
+        }
 
         log.info("Admin vừa cập nhật trạng thái quán {} sang {}", shopId, targetStatus);
         return mapToResponse(updatedShop);
