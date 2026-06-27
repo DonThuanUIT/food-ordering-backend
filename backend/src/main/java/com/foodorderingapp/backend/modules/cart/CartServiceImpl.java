@@ -112,7 +112,12 @@ public class CartServiceImpl implements CartService {
         Shop shop = food.getShop();
         return shop.getStatus() == ShopStatus.APPROVED
                 && Boolean.TRUE.equals(shop.getIsActive())
+                && !isShopOwnerLocked(shop)
                 && Boolean.TRUE.equals(food.getIsAvailable());
+    }
+
+    private boolean isShopOwnerLocked(Shop shop) {
+        return shop.getOwner() != null && Boolean.TRUE.equals(shop.getOwner().getIsLocked());
     }
 
     @Override
