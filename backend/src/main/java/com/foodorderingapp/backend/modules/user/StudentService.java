@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -79,25 +80,35 @@ public class StudentService {
                 .map(Order::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Group by week for breakdown
         Map<String, BigDecimal> breakdownMap = new LinkedHashMap<>();
         LocalDate start = effectiveFrom.toLocalDate();
         LocalDate end = effectiveTo.toLocalDate();
+        boolean groupByDay = ChronoUnit.DAYS.between(start, end) <= 31;
 
         for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
-            LocalDate weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-            LocalDate weekEnd = weekStart.plusDays(6);
-            String weekKey = weekStart.toString() + " - " + weekEnd.toString();
-            breakdownMap.putIfAbsent(weekKey, BigDecimal.ZERO);
+            if (groupByDay) {
+                String dayKey = date + " - " + date;
+                breakdownMap.putIfAbsent(dayKey, BigDecimal.ZERO);
+            } else {
+                LocalDate weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+                LocalDate weekEnd = weekStart.plusDays(6);
+                String weekKey = weekStart + " - " + weekEnd;
+                breakdownMap.putIfAbsent(weekKey, BigDecimal.ZERO);
+            }
         }
 
         for (Order order : completedOrders) {
             LocalDateTime spendingTime = order.getCompletedAt() != null ? order.getCompletedAt() : order.getCreatedAt();
             LocalDate orderDate = spendingTime.toLocalDate();
-            LocalDate weekStart = orderDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-            LocalDate weekEnd = weekStart.plusDays(6);
-            String weekKey = weekStart.toString() + " - " + weekEnd.toString();
-            breakdownMap.merge(weekKey, order.getTotalPrice(), BigDecimal::add);
+            String key;
+            if (groupByDay) {
+                key = orderDate + " - " + orderDate;
+            } else {
+                LocalDate weekStart = orderDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+                LocalDate weekEnd = weekStart.plusDays(6);
+                key = weekStart + " - " + weekEnd;
+            }
+            breakdownMap.merge(key, order.getTotalPrice(), BigDecimal::add);
         }
 
         List<SpendingSummaryResponse.SpendingBreakdown> breakdown = breakdownMap.entrySet().stream()
