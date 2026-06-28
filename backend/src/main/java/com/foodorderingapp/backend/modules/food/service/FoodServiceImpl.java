@@ -27,6 +27,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.foodorderingapp.backend.modules.cart.repository.CartItemRepository;
+import com.foodorderingapp.backend.modules.voucher.repository.VoucherRepository;
+import com.foodorderingapp.backend.modules.order.repository.FoodReviewRepository;
+import com.foodorderingapp.backend.modules.order.repository.OrderDetailRepository;
+import com.foodorderingapp.backend.core.enums.OrderStatus;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -36,6 +42,10 @@ public class FoodServiceImpl implements FoodService {
     private final CategoryRepository categoryRepository;
     private final ShopRepository shopRepository;
     private final GeminiService geminiService;
+    private final CartItemRepository cartItemRepository;
+    private final VoucherRepository voucherRepository;
+    private final FoodReviewRepository foodReviewRepository;
+    private final OrderDetailRepository orderDetailRepository;
 
     private Shop validateShopOwnership(UUID shopId, String vendorPhone) {
         Shop shop = shopRepository.findById(shopId)
@@ -212,6 +222,32 @@ public class FoodServiceImpl implements FoodService {
         Food food = foodRepository.findByIdAndShopId(foodId, shopId)
                 .orElseThrow(() -> new AppException("Món ăn không tồn tại!", HttpStatus.NOT_FOUND));
 
+        // 1. Check if there is any active order containing this food
+        List<OrderStatus> activeStatuses = List.of(
+                OrderStatus.PENDING,
+                OrderStatus.CONFIRMED,
+                OrderStatus.DELIVERING,
+                OrderStatus.RECEIVED
+        );
+        boolean hasActiveOrders = orderDetailRepository.existsByFoodIdAndOrderStatusIn(foodId, activeStatuses);
+        if (hasActiveOrders) {
+            throw new AppException("Không thể xóa món ăn này vì đang có đơn hàng chưa hoàn thành chứa món ăn. Hãy hoàn thành đơn hàng hoặc tạm ẩn món ăn này.", HttpStatus.BAD_REQUEST);
+        }
+
+        // 2. Clean up dependencies before deleting
+        // Delete cart items
+        cartItemRepository.deleteAllByFoodId(foodId);
+
+        // Delete voucher food associations
+        voucherRepository.deleteVoucherFoodAssociations(foodId);
+
+        // Delete food reviews
+        foodReviewRepository.deleteAllByFoodId(foodId);
+
+        // Set food_id to null in order details to preserve history
+        orderDetailRepository.setFoodNullByFoodId(foodId);
+
+        // Delete the food itself
         foodRepository.delete(food);
     }
 

@@ -25,4 +25,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, UUID>{
             "WHERE ci.food.shop.id = :shopId " +
             "AND ci.cart.user.phone = :phone")
     void deleteAllByShopIdAndUserPhone(@Param("shopId") UUID shopId, @Param("phone") String phone);
+
+    @Modifying
+    @Query("DELETE FROM CartItem ci WHERE ci.food.id = :foodId")
+    void deleteAllByFoodId(@Param("foodId") UUID foodId);
 }
