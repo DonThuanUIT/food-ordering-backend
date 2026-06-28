@@ -16,6 +16,7 @@ public record ShopDetailResponse(
         LocalTime openTime,
         LocalTime closeTime,
         Boolean isOpen,
+        Boolean currentlyOpen,
         Double latitude,
         Double longitude,
         List<CategoryMenuResponse> menu
