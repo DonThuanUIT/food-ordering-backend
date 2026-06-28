@@ -31,4 +31,5 @@ public interface ShopService {
     boolean toggleFavoriteShop(UUID shopId, String userPhone);
     boolean isFavoriteShop(UUID shopId, String userPhone);
     List<ShopResponse> getFavoriteShops(String userPhone);
+    List<com.foodorderingapp.backend.modules.shop.dto.response.FollowerResponse> getShopFollowers(UUID shopId, String vendorPhone);
 }
