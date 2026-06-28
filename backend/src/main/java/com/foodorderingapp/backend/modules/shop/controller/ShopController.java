@@ -11,6 +11,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -35,5 +37,23 @@ public class ShopController {
     @GetMapping("/{shopId}/detail-menu")
     public ResponseEntity<ShopDetailResponse> getShopDetailAndMenu(@PathVariable UUID shopId){
         return ResponseEntity.ok(shopService.getShopDetailWithMenu(shopId));
+    }
+
+    // 3. Toggle favorite shop
+    @PostMapping("/{shopId}/favorite")
+    public ResponseEntity<Boolean> toggleFavorite(@PathVariable UUID shopId, Principal principal) {
+        return ResponseEntity.ok(shopService.toggleFavoriteShop(shopId, principal.getName()));
+    }
+
+    // 4. Check if shop is favorite
+    @GetMapping("/{shopId}/is-favorite")
+    public ResponseEntity<Boolean> isFavorite(@PathVariable UUID shopId, Principal principal) {
+        return ResponseEntity.ok(shopService.isFavoriteShop(shopId, principal.getName()));
+    }
+
+    // 5. Get favorite shops list
+    @GetMapping("/favorite")
+    public ResponseEntity<List<ShopResponse>> getFavoriteShops(Principal principal) {
+        return ResponseEntity.ok(shopService.getFavoriteShops(principal.getName()));
     }
 }

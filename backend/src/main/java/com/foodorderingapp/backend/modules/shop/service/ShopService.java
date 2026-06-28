@@ -27,4 +27,8 @@ public interface ShopService {
     ShopResponse getShopDetailForAdmin(UUID shopId);
     void requestCloseShopOtp(UUID shopId, String vendorPhone);
     void confirmCloseShop(UUID shopId, ShopCloseRequest request, String vendorPhone);
+
+    boolean toggleFavoriteShop(UUID shopId, String userPhone);
+    boolean isFavoriteShop(UUID shopId, String userPhone);
+    List<ShopResponse> getFavoriteShops(String userPhone);
 }
