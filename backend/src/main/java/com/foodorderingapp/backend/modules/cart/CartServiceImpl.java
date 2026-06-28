@@ -87,6 +87,7 @@ public class CartServiceImpl implements CartService {
                 .map(entry -> new ShopCartResponse(
                         entry.getKey().getId(),
                         entry.getKey().getName(),
+                        getShopLogoUrl(entry.getKey()),
                         entry.getValue().stream().map(this::mapToItemResponse).toList()
                 )).toList();
 
@@ -96,6 +97,13 @@ public class CartServiceImpl implements CartService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return new CartResponse(shops, totalAmount);
+    }
+
+    private String getShopLogoUrl(Shop shop) {
+        if (shop == null || shop.getSettings() == null) {
+            return null;
+        }
+        return shop.getSettings().getLogoUrl();
     }
 
     private CartItemResponse mapToItemResponse(CartItem item) {
