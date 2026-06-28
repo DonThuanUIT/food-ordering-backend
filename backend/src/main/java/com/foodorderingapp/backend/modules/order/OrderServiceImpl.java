@@ -85,6 +85,7 @@ public class OrderServiceImpl implements OrderService {
                 .building(order.getBuildingSnapshot())
                 .cancelReason(order.getCancelReason())
                 .createdAt(order.getCreatedAt())
+                .completedAt(order.getCompletedAt())
                 .details(details)
                 .voucherCode(order.getVoucherCode())
                 .discountAmount(order.getDiscountAmount())

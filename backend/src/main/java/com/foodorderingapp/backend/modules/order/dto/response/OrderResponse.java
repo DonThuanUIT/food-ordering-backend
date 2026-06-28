@@ -21,6 +21,7 @@ public class OrderResponse {
     private String building;
     private String cancelReason;
     private LocalDateTime createdAt;
+    private LocalDateTime completedAt;
     private List<OrderDetailResponse> details;
     private String voucherCode;
     private BigDecimal discountAmount;
