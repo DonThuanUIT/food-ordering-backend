@@ -22,4 +22,7 @@ public interface ShopFollowerRepository extends JpaRepository<ShopFollower, UUID
     // Các phương thức từ main (dùng trong ShopFavoriteController)
     boolean existsByUserPhoneAndShopId(String phone, UUID shopId);
     Optional<ShopFollower> findByUserPhoneAndShopId(String phone, UUID shopId);
+
+    @Query("SELECT sf FROM ShopFollower sf JOIN FETCH sf.user u WHERE sf.shop.id = :shopId")
+    List<ShopFollower> findAllByShopId(@Param("shopId") UUID shopId);
 }

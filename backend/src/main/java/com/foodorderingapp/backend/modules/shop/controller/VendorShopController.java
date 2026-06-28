@@ -84,6 +84,15 @@ public class VendorShopController {
             Principal principal) {
         return ResponseEntity.ok(orderService.getVendorOrders(shopId, status));
     }
+
+    @GetMapping("/{shopId}/followers")
+    public ResponseEntity<List<com.foodorderingapp.backend.modules.shop.dto.response.FollowerResponse>> getShopFollowers(
+            @PathVariable UUID shopId,
+            Principal principal
+    ) {
+        String vendorPhone = principal.getName();
+        return ResponseEntity.ok(shopService.getShopFollowers(shopId, vendorPhone));
+    }
     @PatchMapping("/{shopId}/orders/{orderId}/status")
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable UUID shopId,

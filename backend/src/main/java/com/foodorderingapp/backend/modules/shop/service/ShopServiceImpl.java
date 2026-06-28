@@ -628,4 +628,21 @@ public class ShopServiceImpl implements ShopService {
                 .map(this::mapToStudentResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.foodorderingapp.backend.modules.shop.dto.response.FollowerResponse> getShopFollowers(UUID shopId, String vendorPhone) {
+        shopValidationComponent.validateAndGetShop(shopId, vendorPhone);
+
+        return shopFollowerRepository.findAllByShopId(shopId).stream()
+                .map(sf -> com.foodorderingapp.backend.modules.shop.dto.response.FollowerResponse.builder()
+                        .id(sf.getId())
+                        .userId(sf.getUser().getId())
+                        .name(sf.getUser().getFullName())
+                        .phone(sf.getUser().getPhone())
+                        .email(sf.getUser().getEmail())
+                        .build()
+                )
+                .collect(Collectors.toList());
+    }
 }
