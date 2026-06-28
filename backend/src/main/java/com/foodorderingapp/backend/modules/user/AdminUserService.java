@@ -58,6 +58,7 @@ public class AdminUserService {
                         u.getPhone(),
                         u.getFullName(),
                         u.getEmail(),
+                        u.getAvatarUrl(),
                         u.getRole(),
                         u.getIsLocked()
                 ));

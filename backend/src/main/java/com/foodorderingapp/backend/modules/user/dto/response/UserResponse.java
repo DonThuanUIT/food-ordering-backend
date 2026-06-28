@@ -8,6 +8,7 @@ public record UserResponse(
         String phone,
         String fullName,
         String email,
+        String avatarUrl,
         UserRole role,
         Boolean isLocked
 ) {}
