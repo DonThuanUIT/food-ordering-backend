@@ -31,6 +31,10 @@ public class GeminiService {
     @Value("${gemini.api-key}")
     private String apiKey;
 
+    public void setApiKey(String apiKey) {
+        this.apiKey = apiKey;
+    }
+
     @Value("${gemini.url}")
     private String geminiUrl;
 
@@ -64,6 +68,101 @@ public class GeminiService {
             return "image/gif";
         }
         return "image/jpeg";
+    }
+
+    @Transactional
+    public void analyzeFoodSync(UUID foodId) {
+        log.info("Starting synchronous food analysis for foodId: {}", foodId);
+        Optional<Food> foodOpt = foodRepository.findById(foodId);
+        if (foodOpt.isEmpty()) {
+            log.warn("Food not found for analysis with ID: {}", foodId);
+            return;
+        }
+        Food food = foodOpt.get();
+        try {
+            byte[] imageBytes = downloadImageBytes(food.getImageUrl());
+            String base64Image = null;
+            String mimeType = "image/jpeg";
+            if (imageBytes != null && imageBytes.length > 0) {
+                base64Image = Base64.getEncoder().encodeToString(imageBytes);
+                mimeType = getMimeTypeFromUrl(food.getImageUrl());
+                log.info("Successfully downloaded and base64-encoded image for foodId: {}, size: {} bytes", foodId, imageBytes.length);
+            }
+
+            // Build prompt
+            String prompt = String.format(
+                "Hãy phân tích món ăn có tên là \"%s\" (Mô tả hiện tại: \"%s\"). " +
+                "Nếu có hình ảnh đính kèm, hãy quan sát kỹ hình ảnh món ăn thực tế để đưa ra đánh giá chính xác nhất. " +
+                "Hãy trích xuất: " +
+                "1. Danh sách từ 3 đến 8 thẻ (tags) tiếng Việt viết thường, không dấu cách, ngăn cách bằng dấu gạch quang nếu là từ ghép (ví dụ: \"cay\", \"mon-nuoc\", \"bun\", \"an-sang\"). " +
+                "2. Vùng miền ẩm thực phù hợp nhất (ví dụ: \"Miền Trung\", \"Miền Bắc\", \"Miền Nam\", \"Tây Âu\", \"Hàn Quốc\", \"Nhật Bản\", \"Đồ ăn nhanh\"). " +
+                "3. Cấp độ cay (từ 0 đến 3, trong đó 0 là không cay, 1 là cay nhẹ, 2 là cay vừa, 3 là rất cay). " +
+                "4. Gợi ý mô tả ngắn gọn, hấp dẫn bằng tiếng Việt (khoảng 15-30 từ). " +
+                "Định dạng kết quả trả về bắt buộc phải là một đối tượng JSON hợp lệ có dạng: " +
+                "{\"tags\":[\"tag1\",\"tag2\"],\"cuisine\":\"Tên Vùng Miền\",\"spicyLevel\":1,\"suggestedDescription\":\"Mô tả ngắn...\"}",
+                food.getName(),
+                food.getDescription() != null ? food.getDescription() : ""
+            );
+
+            GeminiRequest requestPayload;
+            if (base64Image != null) {
+                List<GeminiRequest.Part> parts = new ArrayList<>();
+                parts.add(GeminiRequest.Part.builder()
+                        .inlineData(GeminiRequest.InlineData.builder()
+                                .mimeType(mimeType)
+                                .data(base64Image)
+                                .build())
+                        .build());
+                parts.add(GeminiRequest.Part.builder().text(prompt).build());
+
+                GeminiRequest.Content content = GeminiRequest.Content.builder().parts(parts).build();
+                requestPayload = GeminiRequest.builder()
+                        .contents(Collections.singletonList(content))
+                        .generationConfig(GeminiRequest.GenerationConfig.builder()
+                                .responseMimeType("application/json")
+                                .build())
+                        .build();
+            } else {
+                requestPayload = GeminiRequest.fromPrompt(prompt, true);
+            }
+
+            String responseText = callGeminiApi(requestPayload);
+            if (responseText == null || responseText.isBlank()) {
+                log.warn("Gemini returned empty response for food: {}", food.getName());
+                useFallback(food);
+                return;
+            }
+
+            String cleanedResponse = responseText.trim();
+            if (cleanedResponse.startsWith("```")) {
+                cleanedResponse = cleanedResponse.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```$", "").trim();
+            }
+
+            GeminiFoodAnalysis analysis = objectMapper.readValue(cleanedResponse, GeminiFoodAnalysis.class);
+            if (analysis != null) {
+                if (analysis.getTags() != null) {
+                    food.setTags(analysis.getTags());
+                }
+                if (analysis.getCuisine() != null) {
+                    food.setCuisine(analysis.getCuisine());
+                }
+                if (analysis.getSpicyLevel() != null) {
+                    food.setSpicyLevel(analysis.getSpicyLevel());
+                }
+                if (analysis.getSuggestedDescription() != null) {
+                    food.setDescription(analysis.getSuggestedDescription());
+                }
+                foodRepository.save(food);
+                log.info("Successfully analyzed and updated food {} with tags: {}, cuisine: {}, spicyLevel: {}", 
+                    food.getName(), food.getTags(), food.getCuisine(), food.getSpicyLevel());
+            } else {
+                useFallback(food);
+            }
+        } catch (Exception e) {
+            log.error("Error analyzing food with Gemini for foodId: " + foodId, e);
+            useFallback(food);
+            throw new RuntimeException(e);
+        }
     }
 
     @Async
@@ -358,8 +457,9 @@ public class GeminiService {
             }
         } catch (Exception e) {
             log.error("API call to Gemini failed: " + e.getMessage());
+            throw new RuntimeException("Gemini API call failed: " + e.getMessage(), e);
         }
-        return null;
+        throw new RuntimeException("Gemini API returned empty response");
     }
 
     /**

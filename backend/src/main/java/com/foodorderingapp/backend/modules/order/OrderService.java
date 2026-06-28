@@ -31,4 +31,6 @@ public interface OrderService {
     OrderResponse updateShipperLocation(UUID orderId, String shipperPhone, Double latitude, Double longitude);
     List<OrderResponse> getShipperActiveOrders(String shipperPhone);
     List<OrderResponse> getShipperOrderHistory(String shipperPhone);
+    OrderResponse hideOrderForShipper(UUID orderId, String shipperPhone);
+    OrderResponse hideOrderForVendor(UUID orderId);
 }
