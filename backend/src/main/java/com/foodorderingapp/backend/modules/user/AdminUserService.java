@@ -2,9 +2,12 @@ package com.foodorderingapp.backend.modules.user;
 
 import com.foodorderingapp.backend.core.exception.AppException;
 import com.foodorderingapp.backend.modules.user.dto.response.UserResponse;
+import com.foodorderingapp.backend.core.enums.ShopStatus;
+import com.foodorderingapp.backend.entity.Shop;
 import com.foodorderingapp.backend.entity.User;
 import com.foodorderingapp.backend.core.enums.UserRole;
 import com.foodorderingapp.backend.modules.auth.repository.UserRepository;
+import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,9 +23,11 @@ import java.util.UUID;
 public class AdminUserService {
 
     private final UserRepository userRepository;
+    private final ShopRepository shopRepository;
 
-    public AdminUserService(UserRepository userRepository) {
+    public AdminUserService(UserRepository userRepository, ShopRepository shopRepository) {
         this.userRepository = userRepository;
+        this.shopRepository = shopRepository;
     }
 
     @Transactional(readOnly = true)
@@ -67,8 +72,10 @@ public class AdminUserService {
             throw new RuntimeException("Lỗi bảo mật: Không được phép khóa tài khoản ADMIN!");
         }
 
-        user.setIsLocked(!user.getIsLocked());
+        boolean newLockedState = !Boolean.TRUE.equals(user.getIsLocked());
+        user.setIsLocked(newLockedState);
         userRepository.save(user);
+        syncVendorShopsAvailability(user, newLockedState);
     }
     @Transactional
     public void updateUserLockStatus(UUID userId, boolean isLocked) {
@@ -82,5 +89,26 @@ public class AdminUserService {
         // Gán trực tiếp trạng thái truyền từ FE gửi lên
         user.setIsLocked(isLocked);
         userRepository.save(user);
+        syncVendorShopsAvailability(user, isLocked);
+    }
+
+    private void syncVendorShopsAvailability(User user, boolean isLocked) {
+        if (user.getRole() != UserRole.VENDOR) {
+            return;
+        }
+
+        List<Shop> shops = shopRepository.findAllByOwnerId(user.getId());
+        for (Shop shop : shops) {
+            if (isLocked) {
+                shop.setIsActive(false);
+                shop.setIsOpen(false);
+                if (shop.getSettings() != null) {
+                    shop.getSettings().setIsOpen(false);
+                }
+            } else if (shop.getStatus() == ShopStatus.APPROVED) {
+                shop.setIsActive(true);
+            }
+        }
+        shopRepository.saveAll(shops);
     }
 }
