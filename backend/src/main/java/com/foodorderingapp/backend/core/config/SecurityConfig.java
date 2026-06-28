@@ -54,6 +54,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 1. Các API Public (Không cần đăng nhập)
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/shops/favorite").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/shops/*/is-favorite").authenticated()
                         .requestMatchers(HttpMethod.GET, "/shops/**").permitAll()
                         .requestMatchers("/foods/explore/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/buildings/**").permitAll()

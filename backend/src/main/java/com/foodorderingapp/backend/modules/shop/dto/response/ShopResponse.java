@@ -26,6 +26,7 @@ public class ShopResponse {
     private String displayStatusText;
     private boolean isActive;
     private String displayStatus;
+    private Double rating;
 
     private String coverUrl;
     private String logoUrl;

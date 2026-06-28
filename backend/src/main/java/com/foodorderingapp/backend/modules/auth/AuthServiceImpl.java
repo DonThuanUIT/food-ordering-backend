@@ -135,6 +135,10 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException("Tài khoản chưa được xác thực email. Vui lòng kiểm tra hòm thư!", HttpStatus.FORBIDDEN);
         }
 
+        if (Boolean.TRUE.equals(user.getIsLocked())) {
+            throw new AppException("Tài khoản của bạn đã bị khóa bởi hệ thống. Vui lòng liên hệ Admin!", HttpStatus.FORBIDDEN);
+        }
+
         log.info("User {} has logged in successfully", user.getPhone());
         return generateAuthResponse(user, "Đăng nhập thành công!");
     }

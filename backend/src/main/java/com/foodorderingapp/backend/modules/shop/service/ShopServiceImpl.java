@@ -14,8 +14,11 @@ import com.foodorderingapp.backend.entity.Food;
 import com.foodorderingapp.backend.entity.Shop;
 import com.foodorderingapp.backend.entity.ShopSettings;
 import com.foodorderingapp.backend.entity.User;
+import com.foodorderingapp.backend.entity.ShopFollower;
 import com.foodorderingapp.backend.core.enums.ShopStatus;
 import com.foodorderingapp.backend.core.exception.AppException;
+import com.foodorderingapp.backend.modules.order.repository.ShopReviewRepository;
+import com.foodorderingapp.backend.modules.shop.repository.ShopFollowerRepository;
 import com.foodorderingapp.backend.core.util.ShopOpeningHours;
 import com.foodorderingapp.backend.modules.food.repository.FoodRepository;
 import com.foodorderingapp.backend.modules.shop.repository.ShopRepository;
@@ -37,6 +40,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -52,6 +56,8 @@ public class ShopServiceImpl implements ShopService {
     private final EmailService emailService;
     private final OtpService otpService;
     private final PasswordEncoder passwordEncoder;
+    private final ShopReviewRepository shopReviewRepository;
+    private final ShopFollowerRepository shopFollowerRepository;
 
     @Override
     @Transactional
@@ -112,6 +118,7 @@ public class ShopServiceImpl implements ShopService {
     }
 
     private ShopResponse mapToResponse(Shop shop) {
+        Double avgRating = shopReviewRepository.getAverageRatingForShop(shop.getId());
         ShopResponse.ShopResponseBuilder builder = ShopResponse.builder()
                 .id(shop.getId())
                 .name(shop.getName())
@@ -125,7 +132,8 @@ public class ShopServiceImpl implements ShopService {
                 .isOpen(shop.getIsOpen())
                 .displayStatus(calculateDisplayStatus(shop))
                 .latitude(shop.getLatitude())
-                .longitude(shop.getLongitude());
+                .longitude(shop.getLongitude())
+                .rating(avgRating != null ? avgRating : 0.0);
 
         ShopSettings settings = shop.getSettings();
         if (settings != null) {
@@ -181,6 +189,7 @@ public class ShopServiceImpl implements ShopService {
             logoUrl = settings.getLogoUrl();
         }
         LocalTime[] hours = ShopOpeningHours.effectiveOpeningHoursToday(shop);
+        Double avgRating = shopReviewRepository.getAverageRatingForShop(shop.getId());
         
         return ShopResponse.builder()
                 .id(shop.getId())
@@ -198,6 +207,7 @@ public class ShopServiceImpl implements ShopService {
                 .isOpen(shop.getIsOpen())
                 .latitude(shop.getLatitude())
                 .longitude(shop.getLongitude())
+                .rating(avgRating != null ? avgRating : 0.0)
                 .build();
     }
 
@@ -563,5 +573,47 @@ public class ShopServiceImpl implements ShopService {
             case BANNED -> "ĐÃ BỊ KHÓA";
             case CLOSED -> "ĐÃ ĐÓNG CỬA VĨNH VIỄN";
         };
+    }
+
+    @Override
+    @Transactional
+    public boolean toggleFavoriteShop(UUID shopId, String userPhone) {
+        User user = userRepository.findByPhone(userPhone)
+                .orElseThrow(() -> new AppException("Không tìm thấy người dùng", HttpStatus.NOT_FOUND));
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new AppException("Không tìm thấy cửa hàng", HttpStatus.NOT_FOUND));
+
+        Optional<ShopFollower> followerOpt = shopFollowerRepository.findByUserIdAndShopId(user.getId(), shop.getId());
+        if (followerOpt.isPresent()) {
+            shopFollowerRepository.delete(followerOpt.get());
+            return false; // Removed from favorites
+        } else {
+            ShopFollower follower = ShopFollower.builder()
+                    .user(user)
+                    .shop(shop)
+                    .build();
+            shopFollowerRepository.save(follower);
+            return true; // Added to favorites
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isFavoriteShop(UUID shopId, String userPhone) {
+        User user = userRepository.findByPhone(userPhone)
+                .orElseThrow(() -> new AppException("Không tìm thấy người dùng", HttpStatus.NOT_FOUND));
+        return shopFollowerRepository.existsByUserIdAndShopId(user.getId(), shopId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ShopResponse> getFavoriteShops(String userPhone) {
+        User user = userRepository.findByPhone(userPhone)
+                .orElseThrow(() -> new AppException("Không tìm thấy người dùng", HttpStatus.NOT_FOUND));
+        return shopFollowerRepository.findAllByUserId(user.getId()).stream()
+                .map(ShopFollower::getShop)
+                .filter(shop -> shop.getStatus() == ShopStatus.APPROVED && Boolean.TRUE.equals(shop.getIsActive()))
+                .map(this::mapToStudentResponse)
+                .collect(Collectors.toList());
     }
 }
