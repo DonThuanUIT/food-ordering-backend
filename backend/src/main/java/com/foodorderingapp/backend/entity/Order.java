@@ -94,7 +94,15 @@ public class Order {
     @Column(name = "voucher_code")
     private String voucherCode;
 
-    @Column(name = "discount_amount")
+    @Column(name = "discount_amount", nullable = false)
     @Builder.Default
     private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(name = "hidden_by_shipper", nullable = false)
+    @Builder.Default
+    private boolean hiddenByShipper = false;
+
+    @Column(name = "hidden_by_vendor", nullable = false)
+    @Builder.Default
+    private boolean hiddenByVendor = false;
 }

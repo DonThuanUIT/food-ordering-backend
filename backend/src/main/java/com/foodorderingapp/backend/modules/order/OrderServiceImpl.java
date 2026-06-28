@@ -671,6 +671,27 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public OrderResponse hideOrderForShipper(UUID orderId, String shipperPhone) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new com.foodorderingapp.backend.core.exception.AppException("Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND));
+        if (order.getShipper() == null || !order.getShipper().getPhone().equals(shipperPhone)) {
+            throw new com.foodorderingapp.backend.core.exception.AppException("Bạn không phải shipper của đơn hàng này", HttpStatus.FORBIDDEN);
+        }
+        order.setHiddenByShipper(true);
+        return mapToOrderResponse(orderRepository.save(order));
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse hideOrderForVendor(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new com.foodorderingapp.backend.core.exception.AppException("Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND));
+        order.setHiddenByVendor(true);
+        return mapToOrderResponse(orderRepository.save(order));
+    }
+
     private boolean isShopOwnerLocked(Shop shop) {
         return shop.getOwner() != null && Boolean.TRUE.equals(shop.getOwner().getIsLocked());
     }
