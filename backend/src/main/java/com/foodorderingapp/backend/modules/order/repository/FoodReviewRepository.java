@@ -17,4 +17,8 @@ public interface FoodReviewRepository extends JpaRepository<FoodReview, UUID> {
 
     @Query("SELECT AVG(fr.rating) FROM FoodReview fr WHERE fr.food.id = :foodId")
     Double getAverageRatingForFood(@Param("foodId") UUID foodId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM FoodReview fr WHERE fr.food.id = :foodId")
+    void deleteAllByFoodId(@Param("foodId") UUID foodId);
 }

@@ -21,4 +21,8 @@ public interface VoucherRepository extends JpaRepository<Voucher, UUID> {
 
     @Query("SELECT v FROM Voucher v LEFT JOIN FETCH v.foods WHERE v.shop.id = :shopId AND v.isActive = true AND (v.startDate IS NULL OR v.startDate <= :now) AND (v.endDate IS NULL OR v.endDate >= :now)")
     List<Voucher> findActiveVouchers(UUID shopId, LocalDateTime now);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = "DELETE FROM voucher_foods WHERE food_id = :foodId", nativeQuery = true)
+    void deleteVoucherFoodAssociations(@org.springframework.data.repository.query.Param("foodId") UUID foodId);
 }
