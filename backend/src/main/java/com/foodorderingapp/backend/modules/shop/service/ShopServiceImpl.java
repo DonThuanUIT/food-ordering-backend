@@ -130,6 +130,7 @@ public class ShopServiceImpl implements ShopService {
                 .displayStatusText(calculateVerificationStatusText(shop.getStatus()))
                 .isActive(shop.getIsActive())
                 .isOpen(shop.getIsOpen())
+                .currentlyOpen(isCurrentlyOpen(shop))
                 .displayStatus(calculateDisplayStatus(shop))
                 .latitude(shop.getLatitude())
                 .longitude(shop.getLongitude())
@@ -188,7 +189,7 @@ public class ShopServiceImpl implements ShopService {
             coverUrl = settings.getCoverUrl();
             logoUrl = settings.getLogoUrl();
         }
-        LocalTime[] hours = ShopOpeningHours.effectiveOpeningHoursToday(shop);
+        LocalTime[] hours = ShopOpeningHours.effectiveOpeningHoursNow(shop);
         Double avgRating = shopReviewRepository.getAverageRatingForShop(shop.getId());
         
         return ShopResponse.builder()
@@ -205,6 +206,7 @@ public class ShopServiceImpl implements ShopService {
                 .coverUrl(coverUrl)
                 .logoUrl(logoUrl)
                 .isOpen(shop.getIsOpen())
+                .currentlyOpen(isCurrentlyOpen(shop))
                 .latitude(shop.getLatitude())
                 .longitude(shop.getLongitude())
                 .rating(avgRating != null ? avgRating : 0.0)
@@ -213,10 +215,19 @@ public class ShopServiceImpl implements ShopService {
 
     private String calculateDisplayStatus(Shop shop) {
         String displayStatus = "ĐÓNG CỬA";
-        if (Boolean.TRUE.equals(shop.getIsOpen()) && ShopOpeningHours.isOpenNow(shop)) {
+        if (isCurrentlyOpen(shop)) {
             displayStatus = "ĐANG HOẠT ĐỘNG";
         }
         return displayStatus;
+    }
+
+    private boolean isCurrentlyOpen(Shop shop) {
+        return shop != null
+                && shop.getStatus() == ShopStatus.APPROVED
+                && Boolean.TRUE.equals(shop.getIsActive())
+                && Boolean.TRUE.equals(shop.getIsOpen())
+                && !isShopOwnerLocked(shop)
+                && ShopOpeningHours.isOpenNow(shop);
     }
 
     @Override
@@ -260,7 +271,7 @@ public class ShopServiceImpl implements ShopService {
             coverUrl = settings.getCoverUrl();
             logoUrl = settings.getLogoUrl();
         }
-        LocalTime[] hours = ShopOpeningHours.effectiveOpeningHoursToday(shop);
+        LocalTime[] hours = ShopOpeningHours.effectiveOpeningHoursNow(shop);
         return new ShopDetailResponse(
                 shop.getId(),
                 shop.getName(),
@@ -271,6 +282,7 @@ public class ShopServiceImpl implements ShopService {
                 hours[0],
                 hours[1],
                 shop.getIsOpen(),
+                isCurrentlyOpen(shop),
                 shop.getLatitude(),
                 shop.getLongitude(),
                 menu

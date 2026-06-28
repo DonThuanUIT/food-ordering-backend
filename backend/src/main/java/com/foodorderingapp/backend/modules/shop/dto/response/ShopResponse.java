@@ -31,6 +31,7 @@ public class ShopResponse {
     private String coverUrl;
     private String logoUrl;
     private Boolean isOpen;
+    private Boolean currentlyOpen;
     private String email;
     private String phone;
     private String bankName;

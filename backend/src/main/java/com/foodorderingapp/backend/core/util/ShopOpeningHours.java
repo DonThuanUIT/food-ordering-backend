@@ -19,6 +19,26 @@ public final class ShopOpeningHours {
         return effectiveOpeningHours(shop, LocalDate.now(BUSINESS_ZONE));
     }
 
+    public static LocalTime[] effectiveOpeningHoursNow(Shop shop) {
+        return effectiveOpeningHoursAt(shop, LocalDateTime.now(BUSINESS_ZONE));
+    }
+
+    public static LocalTime[] effectiveOpeningHoursAt(Shop shop, LocalDateTime dateTime) {
+        LocalTime time = dateTime.toLocalTime();
+        LocalTime[] todayHours = effectiveOpeningHours(shop, dateTime.toLocalDate());
+        if (isWithinSameDayOpeningWindow(time, todayHours[0], todayHours[1])) {
+            return todayHours;
+        }
+
+        LocalTime[] yesterdayHours = effectiveOpeningHours(shop, dateTime.toLocalDate().minusDays(1));
+        if (isOvernightHours(yesterdayHours[0], yesterdayHours[1])
+                && !time.isAfter(yesterdayHours[1])) {
+            return yesterdayHours;
+        }
+
+        return todayHours;
+    }
+
     public static LocalTime[] effectiveOpeningHours(Shop shop, LocalDate date) {
         LocalTime open = shop.getOpenTime();
         LocalTime close = shop.getCloseTime();
@@ -48,7 +68,7 @@ public final class ShopOpeningHours {
     public static boolean isOpenAt(Shop shop, LocalDateTime dateTime) {
         LocalTime time = dateTime.toLocalTime();
         LocalTime[] todayHours = effectiveOpeningHours(shop, dateTime.toLocalDate());
-        if (isWithinOpeningHours(time, todayHours[0], todayHours[1])) {
+        if (isWithinSameDayOpeningWindow(time, todayHours[0], todayHours[1])) {
             return true;
         }
 
@@ -57,7 +77,7 @@ public final class ShopOpeningHours {
                 && !time.isAfter(yesterdayHours[1]);
     }
 
-    private static boolean isWithinOpeningHours(LocalTime time, LocalTime open, LocalTime close) {
+    private static boolean isWithinSameDayOpeningWindow(LocalTime time, LocalTime open, LocalTime close) {
         if (open == null || close == null) {
             return false;
         }
@@ -67,7 +87,7 @@ public final class ShopOpeningHours {
         if (close.isAfter(open)) {
             return !time.isBefore(open) && !time.isAfter(close);
         }
-        return !time.isBefore(open) || !time.isAfter(close);
+        return !time.isBefore(open);
     }
 
     private static boolean isOvernightHours(LocalTime open, LocalTime close) {
