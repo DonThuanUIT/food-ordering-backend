@@ -68,6 +68,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "LEFT JOIN FETCH o.shop s " +
             "JOIN FETCH o.shipper sh " +
             "WHERE sh.phone = :phone " +
+            "AND o.hiddenByShipper = false " +
             "AND o.status IN ('CONFIRMED', 'DELIVERING')")
     List<Order> findActiveOrdersByShipper(@Param("phone") String phone);
 
@@ -78,6 +79,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "LEFT JOIN FETCH o.shop s " +
             "JOIN FETCH o.shipper sh " +
             "WHERE sh.phone = :phone " +
+            "AND o.hiddenByShipper = false " +
             "AND o.status IN ('COMPLETED', 'RECEIVED') " +
             "ORDER BY o.createdAt DESC")
     List<Order> findOrderHistoryByShipper(@Param("phone") String phone);
@@ -94,6 +96,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "LEFT JOIN FETCH o.shop " +
             "LEFT JOIN FETCH o.shipper " +
             "WHERE o.shop.id = :shopId " +
+            "AND o.hiddenByVendor = false " +
             "AND (:status IS NULL OR o.status = :status) " +
             "ORDER BY o.createdAt DESC")
     List<Order> findByShopIdAndStatus(@Param("shopId") UUID shopId,

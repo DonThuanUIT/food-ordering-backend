@@ -201,4 +201,19 @@ public class OrderController {
         VendorDashboardDto data = orderService.getVendorDashboard(shopId, startDate, endDate);
         return ResponseEntity.ok(data);
     }
+
+    @PatchMapping("/{orderId}/shipper/hide")
+    public ResponseEntity<OrderResponse> hideOrderForShipper(
+            @PathVariable UUID orderId,
+            Principal principal) {
+        OrderResponse updated = orderService.hideOrderForShipper(orderId, principal.getName());
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/{orderId}/vendor/hide")
+    public ResponseEntity<OrderResponse> hideOrderForVendor(
+            @PathVariable UUID orderId) {
+        OrderResponse updated = orderService.hideOrderForVendor(orderId);
+        return ResponseEntity.ok(updated);
+    }
 }
