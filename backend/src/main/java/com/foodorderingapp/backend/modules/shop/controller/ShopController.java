@@ -1,6 +1,7 @@
 package com.foodorderingapp.backend.modules.shop.controller;
 
 import com.foodorderingapp.backend.modules.shop.dto.response.ShopDetailResponse;
+import com.foodorderingapp.backend.modules.shop.dto.response.ShopLocationDTO;
 import com.foodorderingapp.backend.modules.shop.dto.response.ShopResponse;
 import com.foodorderingapp.backend.modules.shop.service.ShopService;
 import lombok.RequiredArgsConstructor;
@@ -55,5 +56,11 @@ public class ShopController {
     @GetMapping("/favorite")
     public ResponseEntity<List<ShopResponse>> getFavoriteShops(Principal principal) {
         return ResponseEntity.ok(shopService.getFavoriteShops(principal.getName()));
+    }
+
+    // >>> PHASE 1: KTX Food Map - Lấy danh sách tọa độ quán ăn đang mở cửa
+    @GetMapping("/locations")
+    public ResponseEntity<List<ShopLocationDTO>> getShopLocations() {
+        return ResponseEntity.ok(shopService.getActiveShopLocations());
     }
 }

@@ -68,4 +68,16 @@ public interface FoodRepository extends JpaRepository<Food, UUID> {
            "AND s.status = 'APPROVED' " +
            "AND (o.isLocked = false OR o.isLocked IS NULL)")
     List<Food> findAllAvailableFoodsByShopId(@Param("shopId") UUID shopId);
+
+    // >>> PHASE 2: Function Calling - Tìm món theo từ khóa
+    @Query("SELECT f FROM Food f " +
+           "JOIN FETCH f.category " +
+           "JOIN FETCH f.shop s " +
+           "JOIN FETCH s.owner o " +
+           "WHERE f.isAvailable = true " +
+           "AND s.isActive = true " +
+           "AND s.status = 'APPROVED' " +
+           "AND (o.isLocked = false OR o.isLocked IS NULL) " +
+           "AND LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<Food> searchAvailableFoodsByKeyword(@Param("keyword") String keyword);
 }

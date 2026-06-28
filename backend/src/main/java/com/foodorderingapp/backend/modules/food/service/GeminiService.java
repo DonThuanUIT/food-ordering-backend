@@ -200,6 +200,90 @@ public class GeminiService {
         }
     }
 
+    /**
+     * Tạo danh sách Tool declarations cho Gemini Native Function Calling.
+     * Các tools này là READ-ONLY, chỉ query dữ liệu.
+     */
+    public List<GeminiRequest.Tool> createToolsDeclaration() {
+        // Tool 1: searchShops
+        GeminiRequest.SchemaProperty keywordProp = GeminiRequest.SchemaProperty.builder()
+                .type("string").description("Từ khóa tìm quán (VD: trà sữa, bún bò)").build();
+        GeminiRequest.SchemaProperty latProp = GeminiRequest.SchemaProperty.builder()
+                .type("number").description("Vĩ độ người dùng (optional)").build();
+        GeminiRequest.SchemaProperty lngProp = GeminiRequest.SchemaProperty.builder()
+                .type("number").description("Kinh độ người dùng (optional)").build();
+        GeminiRequest.SchemaProperty radiusProp = GeminiRequest.SchemaProperty.builder()
+                .type("number").description("Bán kính tìm kiếm tính bằng km (optional, default 2.0)").build();
+
+        GeminiRequest.FunctionDeclaration searchShopsFn = GeminiRequest.FunctionDeclaration.builder()
+                .name("searchShops")
+                .description("Tìm kiếm quán ăn đang hoạt động. Có thể tìm theo từ khóa, vị trí gần user, hoặc cả hai.")
+                .parameters(GeminiRequest.OpenApiSchema.builder()
+                        .type("object")
+                        .properties(Map.of(
+                                "keyword", keywordProp,
+                                "lat", latProp,
+                                "lng", lngProp,
+                                "radiusKm", radiusProp
+                        ))
+                        .required(List.of())
+                        .build())
+                .build();
+
+        // Tool 2: searchFoods
+        GeminiRequest.SchemaProperty foodKeywordProp = GeminiRequest.SchemaProperty.builder()
+                .type("string").description("Từ khóa tìm món ăn (VD: trà sữa, cơm tấm)").build();
+        GeminiRequest.SchemaProperty sortByProp = GeminiRequest.SchemaProperty.builder()
+                .type("string").description("Cách sắp xếp: price_asc (rẻ nhất), price_desc (mắc nhất), name (tên A-Z)").build();
+
+        GeminiRequest.FunctionDeclaration searchFoodsFn = GeminiRequest.FunctionDeclaration.builder()
+                .name("searchFoods")
+                .description("Tìm kiếm món ăn đang bán. Có thể sắp xếp theo giá hoặc tên.")
+                .parameters(GeminiRequest.OpenApiSchema.builder()
+                        .type("object")
+                        .properties(Map.of(
+                                "keyword", foodKeywordProp,
+                                "sortBy", sortByProp
+                        ))
+                        .required(List.of())
+                        .build())
+                .build();
+
+        // Tool 3: getShopDetail
+        GeminiRequest.SchemaProperty shopIdProp = GeminiRequest.SchemaProperty.builder()
+                .type("string").description("UUID của quán ăn cần xem chi tiết").build();
+
+        GeminiRequest.FunctionDeclaration getShopDetailFn = GeminiRequest.FunctionDeclaration.builder()
+                .name("getShopDetail")
+                .description("Lấy thông tin chi tiết của một quán ăn bao gồm tên, địa chỉ, giờ mở cửa, menu các món.")
+                .parameters(GeminiRequest.OpenApiSchema.builder()
+                        .type("object")
+                        .properties(Map.of("shopId", shopIdProp))
+                        .required(List.of("shopId"))
+                        .build())
+                .build();
+
+        // Tool 4: getBuildingCoordinates
+        GeminiRequest.SchemaProperty buildingNameProp = GeminiRequest.SchemaProperty.builder()
+                .type("string").description("Tên tòa nhà KTX (VD: A2, B1, C3, A1)").build();
+
+        GeminiRequest.FunctionDeclaration getBuildingCoordFn = GeminiRequest.FunctionDeclaration.builder()
+                .name("getBuildingCoordinates")
+                .description("Tra cứu tọa độ (latitude, longitude) của tòa nhà trong khu KTX.")
+                .parameters(GeminiRequest.OpenApiSchema.builder()
+                        .type("object")
+                        .properties(Map.of("name", buildingNameProp))
+                        .required(List.of("name"))
+                        .build())
+                .build();
+
+        GeminiRequest.Tool tool = GeminiRequest.Tool.builder()
+                .functionDeclarations(List.of(searchShopsFn, searchFoodsFn, getShopDetailFn, getBuildingCoordFn))
+                .build();
+
+        return List.of(tool);
+    }
+
     public List<GeminiRecommendationMatch> recommendFoods(String userQuery, List<Food> availableFoods) {
         if (availableFoods == null || availableFoods.isEmpty()) {
             return Collections.emptyList();
@@ -274,6 +358,29 @@ public class GeminiService {
             }
         } catch (Exception e) {
             log.error("API call to Gemini failed: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Gọi Gemini API với Function Calling support.
+     * Trả về GeminiResponse đầy đủ để controller xử lý agentic loop.
+     */
+    public GeminiResponse callGeminiWithFunctions(GeminiRequest requestPayload) {
+        String url = geminiUrl + "?key=" + apiKey;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<GeminiRequest> entity = new HttpEntity<>(requestPayload, headers);
+
+        try {
+            ResponseEntity<GeminiResponse> response = restTemplate.postForEntity(url, entity, GeminiResponse.class);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return response.getBody();
+            }
+        } catch (Exception e) {
+            log.error("Gemini API call with functions failed: " + e.getMessage());
         }
         return null;
     }

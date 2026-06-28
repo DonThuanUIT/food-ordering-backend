@@ -32,4 +32,11 @@ public interface ShopService {
     boolean isFavoriteShop(UUID shopId, String userPhone);
     List<ShopResponse> getFavoriteShops(String userPhone);
     List<com.foodorderingapp.backend.modules.shop.dto.response.FollowerResponse> getShopFollowers(UUID shopId, String vendorPhone);
+
+    // >>> PHASE 1: KTX Food Map
+    List<com.foodorderingapp.backend.modules.shop.dto.response.ShopLocationDTO> getActiveShopLocations();
+
+    // >>> PHASE 1: AI Spatial - Tìm shop gần vị trí
+    List<com.foodorderingapp.backend.modules.shop.dto.response.ShopLocationDTO> findNearestShops(
+            double userLat, double userLng, double radiusKm);
 }

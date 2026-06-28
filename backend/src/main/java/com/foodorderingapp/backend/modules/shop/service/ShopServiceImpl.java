@@ -38,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -644,5 +645,65 @@ public class ShopServiceImpl implements ShopService {
                         .build()
                 )
                 .collect(Collectors.toList());
+    }
+
+    // ========== PHASE 1: KTX Food Map & AI Spatial ==========
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.foodorderingapp.backend.modules.shop.dto.response.ShopLocationDTO> getActiveShopLocations() {
+        List<Shop> shops = shopRepository.findActiveShopsWithLocation(ShopStatus.APPROVED);
+        return shops.stream()
+                .map(this::mapToLocationDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.foodorderingapp.backend.modules.shop.dto.response.ShopLocationDTO> findNearestShops(
+            double userLat, double userLng, double radiusKm) {
+        List<Shop> shops = shopRepository.findActiveShopsWithLocation(ShopStatus.APPROVED);
+
+        return shops.stream()
+                .filter(shop -> {
+                    double distance = calculateHaversineDistance(
+                            userLat, userLng, shop.getLatitude(), shop.getLongitude());
+                    return distance <= radiusKm;
+                })
+                .sorted(Comparator.comparingDouble(shop ->
+                        calculateHaversineDistance(userLat, userLng,
+                                shop.getLatitude(), shop.getLongitude())))
+                .map(this::mapToLocationDTO)
+                .collect(Collectors.toList());
+    }
+
+    private com.foodorderingapp.backend.modules.shop.dto.response.ShopLocationDTO mapToLocationDTO(Shop shop) {
+        String coverUrl = shop.getSettings() != null ? shop.getSettings().getCoverUrl() : null;
+        Double avgRating = shopReviewRepository.getAverageRatingForShop(shop.getId());
+
+        return com.foodorderingapp.backend.modules.shop.dto.response.ShopLocationDTO.builder()
+                .id(shop.getId())
+                .name(shop.getName())
+                .address(shop.getAddress())
+                .latitude(shop.getLatitude())
+                .longitude(shop.getLongitude())
+                .coverUrl(coverUrl)
+                .rating(avgRating != null ? avgRating : 0.0)
+                .currentlyOpen(isCurrentlyOpen(shop))
+                .build();
+    }
+
+    /**
+     * Tính khoảng cách Haversine giữa 2 tọa độ (km)
+     */
+    private double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6371; // Bán kính Trái Đất (km)
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 }

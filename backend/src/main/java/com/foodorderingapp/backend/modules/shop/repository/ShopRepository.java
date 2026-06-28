@@ -35,4 +35,41 @@ public interface ShopRepository extends JpaRepository<Shop, UUID> {
     Optional<Shop> findByIdAndOwner_Phone(UUID id, String phone);
     @Query("SELECT COUNT(s) FROM Shop s WHERE s.status = :status")
     long countByStatus(@Param("status") ShopStatus status);
+
+    // >>> PHASE 1: KTX Food Map - Lấy danh sách shop đã APPROVED, active, có tọa độ
+    @Query("SELECT s FROM Shop s JOIN s.owner o " +
+            "WHERE s.status = :status " +
+            "AND s.isActive = true " +
+            "AND s.latitude IS NOT NULL " +
+            "AND s.longitude IS NOT NULL " +
+            "AND (o.isLocked = false OR o.isLocked IS NULL)")
+    List<Shop> findActiveShopsWithLocation(@Param("status") ShopStatus status);
+
+    // >>> PHASE 1: AI Spatial - Haversine formula tìm shop trong bán kính (km)
+    @Query(value = """
+            SELECT s.* FROM shops s
+            JOIN users u ON s.owner_id = u.id
+            WHERE s.status = 'APPROVED'
+            AND s.is_active = true
+            AND s.latitude IS NOT NULL
+            AND s.longitude IS NOT NULL
+            AND (u.is_locked = false OR u.is_locked IS NULL)
+            AND (
+                6371 * acos(
+                    cos(radians(:userLat)) * cos(radians(s.latitude))
+                    * cos(radians(s.longitude) - radians(:userLng))
+                    + sin(radians(:userLat)) * sin(radians(s.latitude))
+                )
+            ) <= :radiusKm
+            ORDER BY (
+                6371 * acos(
+                    cos(radians(:userLat)) * cos(radians(s.latitude))
+                    * cos(radians(s.longitude) - radians(:userLng))
+                    + sin(radians(:userLat)) * sin(radians(s.latitude))
+                )
+            ) ASC
+            """, nativeQuery = true)
+    List<Shop> findShopsWithinRadius(@Param("userLat") double userLat,
+                                     @Param("userLng") double userLng,
+                                     @Param("radiusKm") double radiusKm);
 }
