@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -81,7 +82,11 @@ public class CartServiceImpl implements CartService {
             return new CartResponse(List.of(), BigDecimal.ZERO);
         }
         Map<Shop, List<CartItem>> groupedByShop = items.stream()
-                .collect(Collectors.groupingBy(item -> item.getFood().getShop()));
+                .collect(Collectors.groupingBy(
+                        item -> item.getFood().getShop(),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
 
         List<ShopCartResponse> shops = groupedByShop.entrySet().stream()
                 .map(entry -> new ShopCartResponse(

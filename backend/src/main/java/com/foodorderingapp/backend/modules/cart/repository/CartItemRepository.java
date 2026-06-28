@@ -17,7 +17,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, UUID>{
     @Query("SELECT ci FROM CartItem ci " +
             "JOIN FETCH ci.food f " +
             "JOIN FETCH f.shop s " +
-            "WHERE ci.cart.user.phone = :phone")
+            "WHERE ci.cart.user.phone = :phone " +
+            "ORDER BY ci.addedAt ASC, ci.id ASC")
     List<CartItem> findAllByUserPhone(@Param("phone") String phone);
     Optional<CartItem> findByCartIdAndFoodId(UUID cartId, UUID foodId);
     @Modifying
