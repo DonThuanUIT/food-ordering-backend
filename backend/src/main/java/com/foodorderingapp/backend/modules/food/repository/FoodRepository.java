@@ -68,4 +68,7 @@ public interface FoodRepository extends JpaRepository<Food, UUID> {
            "AND s.status = 'APPROVED' " +
            "AND (o.isLocked = false OR o.isLocked IS NULL)")
     List<Food> findAllAvailableFoodsByShopId(@Param("shopId") UUID shopId);
+
+    @Query(value = "SELECT * FROM foods f WHERE f.tags IS NULL OR f.tags::text = 'null' OR f.tags::text = '[]' OR jsonb_array_length(f.tags) < 5", nativeQuery = true)
+    List<Food> findAllWithFewerThanFiveTags();
 }

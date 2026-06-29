@@ -93,11 +93,17 @@ public class GeminiService {
             String prompt = String.format(
                 "Hãy phân tích món ăn có tên là \"%s\" (Mô tả hiện tại: \"%s\"). " +
                 "Nếu có hình ảnh đính kèm, hãy quan sát kỹ hình ảnh món ăn thực tế để đưa ra đánh giá chính xác nhất. " +
-                "Hãy trích xuất: " +
-                "1. Danh sách từ 3 đến 8 thẻ (tags) tiếng Việt viết thường, không dấu cách, ngăn cách bằng dấu gạch quang nếu là từ ghép (ví dụ: \"cay\", \"mon-nuoc\", \"bun\", \"an-sang\"). " +
-                "2. Vùng miền ẩm thực phù hợp nhất (ví dụ: \"Miền Trung\", \"Miền Bắc\", \"Miền Nam\", \"Tây Âu\", \"Hàn Quốc\", \"Nhật Bản\", \"Đồ ăn nhanh\"). " +
-                "3. Cấp độ cay (từ 0 đến 3, trong đó 0 là không cay, 1 là cay nhẹ, 2 là cay vừa, 3 là rất cay). " +
-                "4. Gợi ý mô tả ngắn gọn, hấp dẫn bằng tiếng Việt (khoảng 15-30 từ). " +
+                "Hãy trích xuất và trả về kết quả tuân thủ nghiêm ngặt các quy tắc sau: " +
+                "1. Danh sách TỐI THIỂU 5 thẻ, tối đa 10 thẻ (tags) tiếng Việt viết thường, không dấu cách, ngăn cách bằng dấu gạch ngang nếu là từ ghép. Bắt buộc phải có ít nhất 5 tags. " +
+                "2. Quy tắc logic bắt buộc cho tags: " +
+                "   - Nếu là món nước (cháo, súp, canh, lẩu, bún/phở/mì nước...) -> BẮT BUỘC có tag \"mon-nuoc\", TUYỆT ĐỐI KHÔNG có tag \"mon-kho\". " +
+                "   - Nếu là món khô/trộn (mì trộn, hủ tiếu khô, cơm, xôi, bánh mì, hamburger, kimbap...) -> BẮT BUỘC có tag \"mon-kho\" hoặc các tag liên quan như \"com\", \"banh-mi\", TUYỆT ĐỐI KHÔNG có tag \"mon-nuoc\". " +
+                "   - Nếu là nước uống (trà, coca, pepsi, sting, nước ép, sinh tố...) -> BẮT BUỘC có tag \"do-uong\" và \"giai-khat\", TUYỆT ĐỐI KHÔNG có tag \"mon-nuoc\", \"mon-kho\", \"an-trua\", \"an-sang\". " +
+                "   - Nếu là tráng miệng/ăn vặt (pudding, chè, kem, thạch, khúc bạch, bimbim...) -> BẮT BUỘC có tag \"trang-mieng\" hoặc \"do-an-vat\", TUYỆT ĐỐI KHÔNG có tag \"mon-nuoc\", \"mon-kho\". " +
+                "   - Nếu là món thêm/ăn kèm/topping (quẩy, trứng ốp la thêm, mỡ hành, rau thêm, tương thêm...) -> BẮT BUỘC có tag \"topping\", \"mon-kem\" hoặc \"mon-phu\", TUYỆT ĐỐI KHÔNG có tag bữa ăn như \"an-trua\", \"an-sang\". " +
+                "3. Vùng miền ẩm thực phù hợp nhất (ví dụ: \"Miền Trung\", \"Miền Bắc\", \"Miền Nam\", \"Tây Âu\", \"Hàn Quốc\", \"Nhật Bản\", \"Đồ ăn nhanh\", \"Đồ uống\"). " +
+                "4. Cấp độ cay (từ 0 đến 3, trong đó 0 là không cay, 1 là cay nhẹ, 2 là cay vừa, 3 là rất cay). " +
+                "5. Gợi ý mô tả ngắn gọn, hấp dẫn bằng tiếng Việt (khoảng 15-30 từ). " +
                 "Định dạng kết quả trả về bắt buộc phải là một đối tượng JSON hợp lệ có dạng: " +
                 "{\"tags\":[\"tag1\",\"tag2\"],\"cuisine\":\"Tên Vùng Miền\",\"spicyLevel\":1,\"suggestedDescription\":\"Mô tả ngắn...\"}",
                 food.getName(),
@@ -159,9 +165,8 @@ public class GeminiService {
                 useFallback(food);
             }
         } catch (Exception e) {
-            log.error("Error analyzing food with Gemini for foodId: " + foodId, e);
+            log.error("Error analyzing food with Gemini for foodId: " + foodId + ", using fallback.", e);
             useFallback(food);
-            throw new RuntimeException(e);
         }
     }
 
@@ -189,11 +194,17 @@ public class GeminiService {
             String prompt = String.format(
                 "Hãy phân tích món ăn có tên là \"%s\" (Mô tả hiện tại: \"%s\"). " +
                 "Nếu có hình ảnh đính kèm, hãy quan sát kỹ hình ảnh món ăn thực tế để đưa ra đánh giá chính xác nhất. " +
-                "Hãy trích xuất: " +
-                "1. Danh sách từ 3 đến 8 thẻ (tags) tiếng Việt viết thường, không dấu cách, ngăn cách bằng dấu gạch ngang nếu là từ ghép (ví dụ: \"cay\", \"mon-nuoc\", \"bun\", \"an-sang\"). " +
-                "2. Vùng miền ẩm thực phù hợp nhất (ví dụ: \"Miền Trung\", \"Miền Bắc\", \"Miền Nam\", \"Tây Âu\", \"Hàn Quốc\", \"Nhật Bản\", \"Đồ ăn nhanh\"). " +
-                "3. Cấp độ cay (từ 0 đến 3, trong đó 0 là không cay, 1 là cay nhẹ, 2 là cay vừa, 3 là rất cay). " +
-                "4. Gợi ý mô tả ngắn gọn, hấp dẫn bằng tiếng Việt (khoảng 15-30 từ). " +
+                "Hãy trích xuất và trả về kết quả tuân thủ nghiêm ngặt các quy tắc sau: " +
+                "1. Danh sách TỐI THIỂU 5 thẻ, tối đa 10 thẻ (tags) tiếng Việt viết thường, không dấu cách, ngăn cách bằng dấu gạch ngang nếu là từ ghép. Bắt buộc phải có ít nhất 5 tags. " +
+                "2. Quy tắc logic bắt buộc cho tags: " +
+                "   - Nếu là món nước (cháo, súp, canh, lẩu, bún/phở/mì nước...) -> BẮT BUỘC có tag \"mon-nuoc\", TUYỆT ĐỐI KHÔNG có tag \"mon-kho\". " +
+                "   - Nếu là món khô/trộn (mì trộn, hủ tiếu khô, cơm, xôi, bánh mì, hamburger, kimbap...) -> BẮT BUỘC có tag \"mon-kho\" hoặc các tag liên quan như \"com\", \"banh-mi\", TUYỆT ĐỐI KHÔNG có tag \"mon-nuoc\". " +
+                "   - Nếu là nước uống (trà, coca, pepsi, sting, nước ép, sinh tố...) -> BẮT BUỘC có tag \"do-uong\" và \"giai-khat\", TUYỆT ĐỐI KHÔNG có tag \"mon-nuoc\", \"mon-kho\", \"an-trua\", \"an-sang\". " +
+                "   - Nếu là tráng miệng/ăn vặt (pudding, chè, kem, thạch, khúc bạch, bimbim...) -> BẮT BUỘC có tag \"trang-mieng\" hoặc \"do-an-vat\", TUYỆT ĐỐI KHÔNG có tag \"mon-nuoc\", \"mon-kho\". " +
+                "   - Nếu là món thêm/ăn kèm/topping (quẩy, trứng ốp la thêm, mỡ hành, rau thêm, tương thêm...) -> BẮT BUỘC có tag \"topping\", \"mon-kem\" hoặc \"mon-phu\", TUYỆT ĐỐI KHÔNG có tag bữa ăn như \"an-trua\", \"an-sang\". " +
+                "3. Vùng miền ẩm thực phù hợp nhất (ví dụ: \"Miền Trung\", \"Miền Bắc\", \"Miền Nam\", \"Tây Âu\", \"Hàn Quốc\", \"Nhật Bản\", \"Đồ ăn nhanh\", \"Đồ uống\"). " +
+                "4. Cấp độ cay (từ 0 đến 3, trong đó 0 là không cay, 1 là cay nhẹ, 2 là cay vừa, 3 là rất cay). " +
+                "5. Gợi ý mô tả ngắn gọn, hấp dẫn bằng tiếng Việt (khoảng 15-30 từ). " +
                 "Định dạng kết quả trả về bắt buộc phải là một đối tượng JSON hợp lệ có dạng: " +
                 "{\"tags\":[\"tag1\",\"tag2\"],\"cuisine\":\"Tên Vùng Miền\",\"spicyLevel\":1,\"suggestedDescription\":\"Mô tả ngắn...\"}",
                 food.getName(),
@@ -267,33 +278,190 @@ public class GeminiService {
         try {
             List<String> tags = new ArrayList<>();
             String nameLower = food.getName().toLowerCase();
-            if (nameLower.contains("bún") || nameLower.contains("phở") || nameLower.contains("mỳ") || nameLower.contains("mì")) {
-                tags.add("mon-nuoc");
+            String cuisine = "Việt Nam";
+            int spicyLevel = 0;
+
+            // 1. TOPPING / MÓN THÊM / GIA VỊ / RAU THÊM
+            boolean isTopping = nameLower.contains("thêm") || nameLower.contains("topping") || nameLower.contains("quẩy") || 
+                               nameLower.contains("ốp la") || nameLower.contains("lòng thêm") || nameLower.contains("bò thêm") || 
+                               nameLower.contains("gà thêm") || nameLower.contains("trân châu") || nameLower.contains("pudding");
+
+            // 2. ĐỒ UỐNG / NƯỚC GIẢI KHÁT
+            boolean isDrink = nameLower.contains("trà") || nameLower.contains("tra") || nameLower.contains("nước") || 
+                              nameLower.contains("coca") || nameLower.contains("pepsi") || nameLower.contains("sting") || 
+                              nameLower.contains("7 up") || nameLower.contains("7up") || nameLower.contains("lavie") || 
+                              nameLower.contains("sữa") || nameLower.contains("sting") || nameLower.contains("cam") || 
+                              nameLower.contains("dừa") || nameLower.contains("đậu");
+
+            // 3. TRÁNG MIỆNG / ĂN VẶT
+            boolean isDessert = nameLower.contains("pudding") || nameLower.contains("chè") || nameLower.contains("kem") || 
+                                nameLower.contains("thạch") || nameLower.contains("khúc bạch") || nameLower.contains("snack") || 
+                                nameLower.contains("bim bim") || nameLower.contains("bimbim") || nameLower.contains("đào miếng") ||
+                                nameLower.contains("bánh bao hoàng kim") || nameLower.contains("bánh bao lá dứa") || nameLower.contains("da gà");
+
+            if (isTopping) {
+                tags.add("topping");
+                tags.add("mon-phu");
+                tags.add("mon-kem");
+                if (nameLower.contains("trứng") || nameLower.contains("ốp la")) {
+                    tags.add("trung");
+                    tags.add("bo-duong");
+                } else if (nameLower.contains("rau")) {
+                    tags.add("rau");
+                    tags.add("chat-xao");
+                } else if (nameLower.contains("trân châu") || nameLower.contains("pudding")) {
+                    tags.add("trang-mieng");
+                    tags.add("do-ngot");
+                } else {
+                    tags.add("an-kem");
+                }
+                tags.add("tien-loi");
+                cuisine = "Việt Nam";
+            } else if (isDrink) {
+                tags.add("do-uong");
+                tags.add("giai-khat");
+                tags.add("thuc-uong");
+                if (nameLower.contains("sữa") || nameLower.contains("milktea")) {
+                    tags.add("tra-sua");
+                    tags.add("ngot-beo");
+                } else if (nameLower.contains("chanh") || nameLower.contains("tắc") || nameLower.contains("mận") || nameLower.contains("cam")) {
+                    tags.add("tra-trai-cay");
+                    tags.add("chua-ngot");
+                } else {
+                    tags.add("lanh");
+                }
+                tags.add("giai-nhiet");
+                cuisine = "Đồ uống";
+            } else if (isDessert) {
+                tags.add("trang-mieng");
+                tags.add("do-an-vat");
+                tags.add("an-vat");
+                if (nameLower.contains("pudding") || nameLower.contains("khúc bạch") || nameLower.contains("chè") || nameLower.contains("kem")) {
+                    tags.add("do-ngot");
+                    tags.add("mem-min");
+                } else if (nameLower.contains("snack") || nameLower.contains("da gà") || nameLower.contains("bim")) {
+                    tags.add("gion");
+                    tags.add("an-choi");
+                } else {
+                    tags.add("thom-ngon");
+                }
+                cuisine = "Việt Nam";
             } else {
-                tags.add("mon-kho");
+                // 4. MÓN NƯỚC (Bún, Phở, Cháo, Mì nước...)
+                // Loại trừ "bánh mì"/"bánh mỳ" khi kiểm tra chữ "mì"/"mỳ" để tránh nhận diện bánh mì là món nước.
+                // Thêm "chào" để nhận diện lỗi gõ nhầm của "Chào lòng" (Cháo lòng).
+                boolean isSoup = nameLower.contains("bún") || nameLower.contains("phở") || 
+                                 nameLower.contains("cháo") || nameLower.contains("chào") || 
+                                 nameLower.contains("súp") || nameLower.contains("canh") || nameLower.contains("lẩu") || 
+                                 ((nameLower.contains("mì") || nameLower.contains("mỳ")) 
+                                  && !nameLower.contains("bánh mì") 
+                                  && !nameLower.contains("bánh mỳ") 
+                                  && !nameLower.contains("trộn") 
+                                  && !nameLower.contains("khô") 
+                                  && !nameLower.contains("xào") 
+                                  && !nameLower.contains("tương đen"));
+
+                if (isSoup) {
+                    tags.add("mon-nuoc");
+                    if (nameLower.contains("cháo") || nameLower.contains("chào")) {
+                        tags.add("chao");
+                        tags.add("de-tieu");
+                    } else if (nameLower.contains("bún")) {
+                        tags.add("bun");
+                    } else if (nameLower.contains("phở")) {
+                        tags.add("pho");
+                    } else {
+                        tags.add("mi-nuoc");
+                    }
+                    tags.add("ansang");
+                    tags.add("nong-hoi");
+                    cuisine = "Việt Nam";
+                } else {
+                    // 5. MÓN KHÔ / CƠM / BÁNH MÌ / HAMBURGER
+                    tags.add("mon-kho");
+                    if (nameLower.contains("cơm") || nameLower.contains("com")) {
+                        tags.add("com");
+                        tags.add("com-viet");
+                        tags.add("an-trua");
+                    } else if (nameLower.contains("bánh mì") || nameLower.contains("bánh mỳ")) {
+                        tags.add("banh-mi");
+                        tags.add("mon-viet");
+                        tags.add("an-sang");
+                    } else if (nameLower.contains("hamburger") || nameLower.contains("burger")) {
+                        tags.add("hamburger");
+                        tags.add("do-an-nhanh");
+                        cuisine = "Tây Âu";
+                    } else if (nameLower.contains("cơm cuộn") || nameLower.contains("kimbap")) {
+                        tags.add("kimbap");
+                        tags.add("rong-bien");
+                        cuisine = "Hàn Quốc";
+                    } else if (nameLower.contains("trộn") || nameLower.contains("tương đen")) {
+                        tags.add("mi-tron");
+                        tags.add("kho-tron");
+                    } else if (nameLower.contains("gỏi cuốn")) {
+                        tags.add("goi-cuon");
+                        tags.add("khai-vi");
+                        tags.add("thanh-mat");
+                    } else {
+                        tags.add("do-kho");
+                    }
+                    tags.add("bua-chinh");
+                }
             }
-            if (nameLower.contains("cay") || nameLower.contains("lẩu") || nameLower.contains("ớt")) {
+
+            // Spicy & Cuisine specific details
+            if (nameLower.contains("cay") || nameLower.contains("lẩu") || nameLower.contains("ớt") || nameLower.contains("kim chi") || nameLower.contains("kimchi")) {
                 tags.add("cay");
-                food.setSpicyLevel(1);
+                spicyLevel = 1;
             } else {
-                food.setSpicyLevel(0);
+                tags.add("khong-cay");
             }
+
             if (nameLower.contains("huế") || nameLower.contains("quảng")) {
-                food.setCuisine("Miền Trung");
-            } else if (nameLower.contains("hà nội") || nameLower.contains("bắc")) {
-                food.setCuisine("Miền Bắc");
+                cuisine = "Miền Trung";
+                tags.add("mien-trung");
+            } else if (nameLower.contains("hà nội") || nameLower.contains("bắc") || nameLower.contains("bún chả")) {
+                cuisine = "Miền Bắc";
+                tags.add("mien-bac");
             } else if (nameLower.contains("sài gòn") || nameLower.contains("nam")) {
-                food.setCuisine("Miền Nam");
-            } else {
-                food.setCuisine("Việt Nam");
+                cuisine = "Miền Nam";
+                tags.add("mien-nam");
+            } else if (nameLower.contains("hàn quốc") || nameLower.contains("tokbokki") || nameLower.contains("kimchi") || nameLower.contains("kimbap")) {
+                cuisine = "Hàn Quốc";
+                tags.add("han-quoc");
+            } else if (nameLower.contains("thái")) {
+                cuisine = "Thái Lan";
+                tags.add("thai-lan");
             }
-            tags.add("viet-nam");
+
+            // Protein/ingredient tags
+            if (nameLower.contains("gà") || nameLower.contains("ga")) tags.add("ga");
+            if (nameLower.contains("bò") || nameLower.contains("bo")) tags.add("bo");
+            if (nameLower.contains("heo") || nameLower.contains("thịt") || nameLower.contains("sườn") || nameLower.contains("xá xíu")) tags.add("thit");
+            if (nameLower.contains("tôm") || nameLower.contains("cá") || nameLower.contains("hải sản") || nameLower.contains("mực")) tags.add("hai-san");
+            if (nameLower.contains("rau") || nameLower.contains("salad")) tags.add("rau");
+            if (nameLower.contains("trứng")) tags.add("trung");
+            if (nameLower.contains("chay")) tags.add("chay");
+
+            // Final fallback generic tags to ensure at least 5 tags always
+            tags.add("binh-dan");
+            tags.add("an-trua");
+
+            // Filter unique tags and write back
+            List<String> uniqueTags = new ArrayList<>(new LinkedHashSet<>(tags));
             
-            if (food.getTags() == null || food.getTags().isEmpty()) {
-                food.setTags(tags);
+            // Limit tags to maximum 10
+            if (uniqueTags.size() > 10) {
+                uniqueTags = uniqueTags.subList(0, 10);
             }
+
+            food.setTags(uniqueTags);
+            food.setCuisine(cuisine);
+            food.setSpicyLevel(spicyLevel);
+
             foodRepository.save(food);
-            log.info("Applied fallback tags to food {}: {}", food.getName(), food.getTags());
+            log.info("Applied fallback tags to food {}: {} (Cuisine: {}, Spicy: {})", 
+                food.getName(), food.getTags(), food.getCuisine(), food.getSpicyLevel());
         } catch (Exception e) {
             log.error("Failed to apply fallback to food: " + food.getName(), e);
         }
@@ -376,5 +544,84 @@ public class GeminiService {
             throw new RuntimeException("Gemini API call failed: " + e.getMessage(), e);
         }
         throw new RuntimeException("Gemini API returned empty response");
+    }
+
+    /**
+     * Batch re-analyze all foods that have fewer than 5 tags (including null/empty).
+     * Processes sequentially with a delay between each call to avoid Gemini API rate limits.
+     * @return a summary map with counts of success, failure, and total.
+     */
+    public Map<String, Object> reanalyzeFoodsWithFewTags() {
+        List<Food> foods = foodRepository.findAllWithFewerThanFiveTags();
+        log.info("Found {} foods with fewer than 5 tags to re-analyze", foods.size());
+
+        int success = 0;
+        int failed = 0;
+        List<String> failedNames = new ArrayList<>();
+
+        for (Food food : foods) {
+            try {
+                log.info("Re-analyzing food [{}/{}]: {} (id={}, currentTags={})", 
+                    success + failed + 1, foods.size(), food.getName(), food.getId(),
+                    food.getTags() != null ? food.getTags().size() : 0);
+                analyzeFoodSync(food.getId());
+                success++;
+                // Delay 4 seconds between calls to avoid rate limiting
+                Thread.sleep(4000);
+            } catch (Exception e) {
+                failed++;
+                failedNames.add(food.getName() + " (" + food.getId() + ")");
+                log.error("Failed to re-analyze food: {} (id={})", food.getName(), food.getId(), e);
+                try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", foods.size());
+        result.put("success", success);
+        result.put("failed", failed);
+        result.put("failedFoods", failedNames);
+        log.info("Batch re-analysis complete: total={}, success={}, failed={}", foods.size(), success, failed);
+        return result;
+    }
+
+    /**
+     * Batch re-analyze all 92 foods in the database with strict logical constraints.
+     * Uses a longer delay (4.5 seconds) to avoid RPM rate limits.
+     * Fallback covers any transient errors.
+     */
+    public Map<String, Object> reanalyzeAllFoodsAccurate() {
+        List<Food> foods = foodRepository.findAll();
+        log.info("Starting accurate re-analysis for all {} foods in the database", foods.size());
+
+        int success = 0;
+        int failed = 0;
+        List<String> failedNames = new ArrayList<>();
+
+        for (Food food : foods) {
+            try {
+                log.info("Accurate analysis food [{}/{}]: {} (id={}, currentTags={})", 
+                    success + failed + 1, foods.size(), food.getName(), food.getId(),
+                    food.getTags() != null ? food.getTags() : "[]");
+                
+                analyzeFoodSync(food.getId());
+                success++;
+                // Delay 4.5 seconds to strictly respect 15 RPM
+                Thread.sleep(4500);
+            } catch (Exception e) {
+                failed++;
+                failedNames.add(food.getName() + " (" + food.getId() + ")");
+                log.error("Failed to accurately analyze food: {} (id={})", food.getName(), food.getId(), e);
+                try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", foods.size());
+        result.put("success", success);
+        result.put("failed", failed);
+        result.put("failedFoods", failedNames);
+        log.info("Accurate batch re-analysis complete: total={}, success={}, failed={}", foods.size(), success, failed);
+        return result;
     }
 }
