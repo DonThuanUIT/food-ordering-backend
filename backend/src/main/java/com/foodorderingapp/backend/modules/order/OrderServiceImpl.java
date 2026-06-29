@@ -207,10 +207,24 @@ public class OrderServiceImpl implements OrderService {
             appliedVoucherCode = voucher.getCode();
         }
 
-        // 4. Phân giải địa chỉ giao hàng
-        String buildingName = buildingRepository.findById(request.getBuildingId())
-                .map(Building::getName)
+        // 4. Phân giải địa chỉ giao hàng và tính phí vận chuyển
+        Building building = buildingRepository.findById(request.getBuildingId())
                 .orElseThrow(() -> new AppException("Tòa nhà không tồn tại", HttpStatus.BAD_REQUEST));
+        String buildingName = building.getName();
+
+        BigDecimal shippingFee = BigDecimal.ZERO;
+        if (shop.getLatitude() != null && shop.getLongitude() != null &&
+            building.getLatitude() != null && building.getLongitude() != null) {
+            double distMeters = calculateDistance(
+                    shop.getLatitude(), shop.getLongitude(),
+                    building.getLatitude(), building.getLongitude()
+            );
+            double distKm = distMeters / 1000.0;
+            long roundedFee = Math.round((distKm * 5000.0) / 1000.0) * 1000;
+            shippingFee = BigDecimal.valueOf(roundedFee);
+        } else {
+            shippingFee = BigDecimal.valueOf(5000); // fallback
+        }
 
         // 5. Đơn mới chờ quán duyệt, thanh toán xử lý ngoài hệ thống.
         OrderStatus initialStatus = OrderStatus.PENDING;
@@ -219,7 +233,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = Order.builder()
                 .user(user)
                 .shop(shop)
-                .totalPrice(totalOrderPrice.subtract(discountAmount))
+                .totalPrice(totalOrderPrice.subtract(discountAmount).add(shippingFee))
                 .status(initialStatus)
                 .buildingSnapshot(buildingName)
                 .voucherCode(appliedVoucherCode)
@@ -694,5 +708,16 @@ public class OrderServiceImpl implements OrderService {
 
     private boolean isShopOwnerLocked(Shop shop) {
         return shop.getOwner() != null && Boolean.TRUE.equals(shop.getOwner().getIsLocked());
+    }
+
+    private double calculateDistance(double lat1, double lng1, double lat2, double lng2) {
+        double earthRadius = 6371000; // meters
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                   Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadius * c;
     }
 }
