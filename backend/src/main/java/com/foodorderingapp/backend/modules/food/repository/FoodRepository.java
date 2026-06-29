@@ -80,4 +80,7 @@ public interface FoodRepository extends JpaRepository<Food, UUID> {
            "AND (o.isLocked = false OR o.isLocked IS NULL) " +
            "AND LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Food> searchAvailableFoodsByKeyword(@Param("keyword") String keyword);
+
+    @Query(value = "SELECT * FROM foods f WHERE f.tags IS NULL OR f.tags::text = 'null' OR f.tags::text = '[]' OR jsonb_array_length(f.tags) < 5", nativeQuery = true)
+    List<Food> findAllWithFewerThanFiveTags();
 }
