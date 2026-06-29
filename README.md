@@ -174,10 +174,10 @@ curl.exe -X POST http://localhost:8080/api/auth/login -H "Content-Type: applicat
 ## Tài khoản test nội bộ
 | Vai trò | Số điện thoại | Mật khẩu |
 | --- | --- | --- |
-| `SHIPPER` | `0935985407` | `[mật khẩu nội bộ]` |
-| `VENDOR` | `0166666666` | `[mật khẩu nội bộ]` |
-| `STUDENT` | `0144444444` | `[mật khẩu nội bộ]` |
-| `ADMIN` | `0101111111` | `[mật khẩu nội bộ]` |
+| `SHIPPER` | `0935985407` | `Lehuutrung2006@` |
+| `VENDOR` | `0166666666` | `123456` |
+| `STUDENT` | `0144444444` | `123456` |
+| `ADMIN` | `0101111111` | `123456` |
 ## Dữ liệu test local
 Seed data nằm trong các migration Flyway:
 * `V11__Seed_Test_Data.sql`:
