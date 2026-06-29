@@ -142,4 +142,38 @@ public class AIRecommendationController {
         private final Food food;
         private final int score;
     }
+
+    /**
+     * Admin endpoint to batch re-analyze all foods that have fewer than 5 tags.
+     * This calls Gemini sequentially with delays to respect rate limits.
+     */
+    @PostMapping("/admin/reanalyze-untagged")
+    public ResponseEntity<Map<String, Object>> reanalyzeUntaggedFoods() {
+        log.info("Admin triggered batch re-analysis of foods with fewer than 5 tags");
+        Map<String, Object> result = geminiService.reanalyzeFoodsWithFewTags();
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/admin/reanalyze-all-accurate")
+    public ResponseEntity<Map<String, Object>> reanalyzeAllFoodsAccurate() {
+        log.info("Admin triggered accurate batch re-analysis for all foods in database");
+        Map<String, Object> result = geminiService.reanalyzeAllFoodsAccurate();
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/admin/inspect-tags")
+    public ResponseEntity<List<Map<String, Object>>> inspectTags() {
+        List<Food> foods = foodRepository.findAll();
+        List<Map<String, Object>> response = foods.stream().map(f -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", f.getId());
+            map.put("name", f.getName());
+            map.put("tags", f.getTags());
+            map.put("cuisine", f.getCuisine());
+            map.put("spicyLevel", f.getSpicyLevel());
+            map.put("description", f.getDescription());
+            return map;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
 }
